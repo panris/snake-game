@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="超酷炫动感的H5贪吃蛇游戏 - 经典玩法，分级难度，挑战极限">
     <title>🐍 贪吃蛇 - 极限挑战</title>
     <link rel="stylesheet" href="styles/style.css">
@@ -74,20 +74,31 @@
             <!-- 游戏画布 -->
             <div class="canvas-wrapper">
                 <canvas id="game-canvas"></canvas>
-                
-                <!-- 屏幕上控制按钮（移动端） -->
-                <div class="touch-controls" id="touch-controls">
-                    <button class="touch-btn touch-up" data-dir="up">▲</button>
-                    <div class="touch-middle">
-                        <button class="touch-btn touch-left" data-dir="left">◀</button>
-                        <button class="touch-btn touch-center">●</button>
-                        <button class="touch-btn touch-right" data-dir="right">▶</button>
-                    </div>
-                    <button class="touch-btn touch-down" data-dir="down">▼</button>
-                </div>
+
+                <!-- 滑动方向指示器 -->
+                <div id="swipe-indicator" class="swipe-indicator"></div>
 
                 <!-- 开始倒计时 -->
                 <div id="start-countdown" class="overlay-countdown">3</div>
+            </div>
+
+            <!-- 触屏方向键（移动端，独立区域） -->
+            <div class="touch-controls" id="touch-controls">
+                <button class="touch-btn touch-up" data-dir="up">
+                    <svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 4l-8 8h5v8h6v-8h5z" fill="currentColor"/></svg>
+                </button>
+                <div class="touch-middle">
+                    <button class="touch-btn touch-left" data-dir="left">
+                        <svg viewBox="0 0 24 24" width="28" height="28"><path d="M4 12l8-8v5h8v6h-8v5z" fill="currentColor"/></svg>
+                    </button>
+                    <div class="touch-center"></div>
+                    <button class="touch-btn touch-right" data-dir="right">
+                        <svg viewBox="0 0 24 24" width="28" height="28"><path d="M20 12l-8-8v5H4v6h8v5z" fill="currentColor"/></svg>
+                    </button>
+                </div>
+                <button class="touch-btn touch-down" data-dir="down">
+                    <svg viewBox="0 0 24 24" width="28" height="28"><path d="M12 20l8-8h-5V4h-6v8H4z" fill="currentColor"/></svg>
+                </button>
             </div>
 
             <!-- 底部操作提示 -->

@@ -102,8 +102,9 @@ class SnakeGame {
 
         // 输入控制
         this.inputState = { up: false, down: false, left: false, right: false };
-        this.touchStart = { x: 0, y: 0 };
-        this.minSwipeDistance = 30;
+        this.touchStart = null;
+        this.minSwipeDistance = 20;
+        this.isMobile = this.detectMobile();
 
         // 冷却检查
         this.cooldownCheckInterval = null;
@@ -125,10 +126,17 @@ class SnakeGame {
      * 设置画布大小
      */
     setupCanvas() {
-        const wrapper = this.canvas.parentElement;
-        const maxWidth = Math.min(window.innerWidth - 40, 600);
-        const maxHeight = Math.min(window.innerHeight - 250, 600);
-        const size = Math.min(maxWidth, maxHeight);
+        const isMobile = this.isMobile;
+
+        // 移动端需要为触屏方向键预留空间
+        const controlsHeight = isMobile ? 180 : 0;
+        const headerHeight = isMobile ? 80 : 120;
+        const actionsHeight = 60;
+        const padding = isMobile ? 16 : 40;
+
+        const maxWidth = Math.min(window.innerWidth - padding, 600);
+        const maxHeight = Math.min(window.innerHeight - headerHeight - controlsHeight - actionsHeight, 600);
+        const size = Math.max(200, Math.min(maxWidth, maxHeight));
 
         // 调整为网格大小的整数倍
         this.cellSize = Math.floor(size / this.gridSize);
@@ -141,6 +149,15 @@ class SnakeGame {
 
         this.gridW = this.gridSize;
         this.gridH = this.gridSize;
+    }
+
+    /**
+     * 检测移动设备
+     */
+    detectMobile() {
+        return ('ontouchstart' in window) ||
+               (navigator.maxTouchPoints > 0) ||
+               (window.matchMedia('(pointer: coarse)').matches);
     }
 
     /**
@@ -159,16 +176,26 @@ class SnakeGame {
         // 键盘控制
         document.addEventListener('keydown', (e) => this.handleKeyDown(e));
 
-        // 触摸控制
-        this.canvas.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
-        this.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-        this.canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
+        // 全屏触摸滑动控制（不仅限于画布）
+        const swipeArea = document.getElementById('game-screen');
+        swipeArea.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: false });
+        swipeArea.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
+        swipeArea.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
 
-        // 虚拟按钮
+        // 阻止游戏界面默认手势（下拉刷新、双击缩放等）
+        document.addEventListener('touchmove', (e) => {
+            if (this.state === 'playing' || this.state === 'paused') {
+                e.preventDefault();
+            }
+        }, { passive: false });
+
+        // 虚拟方向键
         document.querySelectorAll('.touch-btn[data-dir]').forEach(btn => {
             btn.addEventListener('touchstart', (e) => {
                 e.preventDefault();
+                e.stopPropagation();
                 this.setDirection(btn.dataset.dir);
+                this.flashSwipeIndicator(btn.dataset.dir);
             });
             btn.addEventListener('mousedown', (e) => {
                 e.preventDefault();
@@ -188,10 +215,13 @@ class SnakeGame {
 
         // 窗口大小变化
         window.addEventListener('resize', Utils.debounce(() => {
-            if (this.state === 'menu') {
-                this.setupCanvas();
-            }
+            this.setupCanvas();
         }, 300));
+
+        // 阻止双击缩放
+        document.addEventListener('dblclick', (e) => {
+            if (this.state === 'playing') e.preventDefault();
+        });
     }
 
     /**
@@ -912,31 +942,68 @@ class SnakeGame {
      * 触摸开始
      */
     handleTouchStart(e) {
+        // 不拦截按钮区域的触摸
+        if (e.target.closest('.touch-btn, .action-btn, .quote-popup, .overlay')) return;
+
         if (this.state !== 'playing') return;
+
+        e.preventDefault();
         const touch = e.touches[0];
-        this.touchStart = { x: touch.clientX, y: touch.clientY };
+        this.touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+    }
+
+    /**
+     * 触摸移动
+     */
+    handleTouchMove(e) {
+        if (!this.touchStart || this.state !== 'playing') return;
+        e.preventDefault();
+
+        const touch = e.touches[0];
+        const dx = touch.clientX - this.touchStart.x;
+        const dy = touch.clientY - this.touchStart.y;
+        const absDx = Math.abs(dx);
+        const absDy = Math.abs(dy);
+
+        // 实时检测滑动方向（不等抬起就触发）
+        if (Math.max(absDx, absDy) >= this.minSwipeDistance) {
+            let dir;
+            if (absDx > absDy) {
+                dir = dx > 0 ? 'right' : 'left';
+            } else {
+                dir = dy > 0 ? 'down' : 'up';
+            }
+
+            this.setDirection(dir);
+            this.flashSwipeIndicator(dir);
+
+            // 重置起点，允许连续滑动换方向
+            this.touchStart = { x: touch.clientX, y: touch.clientY, time: Date.now() };
+        }
     }
 
     /**
      * 触摸结束
      */
     handleTouchEnd(e) {
-        if (this.state !== 'playing') return;
-        if (!this.touchStart) return;
+        this.touchStart = null;
+    }
 
-        const touch = e.changedTouches[0];
-        const dx = touch.clientX - this.touchStart.x;
-        const dy = touch.clientY - this.touchStart.y;
-        const absDx = Math.abs(dx);
-        const absDy = Math.abs(dy);
+    /**
+     * 闪烁滑动方向指示器
+     */
+    flashSwipeIndicator(dir) {
+        const indicator = document.getElementById('swipe-indicator');
+        if (!indicator) return;
 
-        if (Math.max(absDx, absDy) < this.minSwipeDistance) return;
+        const arrows = { up: '⬆️', down: '⬇️', left: '⬅️', right: '➡️' };
+        indicator.textContent = arrows[dir] || '';
+        indicator.classList.add('active');
 
-        if (absDx > absDy) {
-            this.setDirection(dx > 0 ? 'right' : 'left');
-        } else {
-            this.setDirection(dy > 0 ? 'down' : 'up');
-        }
+        clearTimeout(this._swipeTimeout);
+        this._swipeTimeout = setTimeout(() => {
+            indicator.classList.remove('active');
+        }, 200);
     }
 
     /**

@@ -299,8 +299,9 @@ body::before {
 
 /* ========== 游戏界面 ========== */
 #game-screen {
-    padding: 10px;
+    padding: 8px;
     justify-content: flex-start;
+    overflow: hidden;
 }
 
 .status-bar {
@@ -360,55 +361,73 @@ body::before {
     border-radius: 18px;
 }
 
-/* 触屏控制按钮 */
+/* 触屏控制按钮 - 独立区域 */
 .touch-controls {
-    position: absolute;
-    bottom: 20px;
-    right: 20px;
     display: none;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    opacity: 0.7;
+    gap: 6px;
+    padding: 10px 0;
+    flex-shrink: 0;
 }
 
 .touch-btn {
-    width: 50px;
-    height: 50px;
-    border: 2px solid rgba(0, 255, 136, 0.4);
-    border-radius: 12px;
-    background: rgba(0, 0, 0, 0.5);
+    width: 64px;
+    height: 64px;
+    border: 2px solid rgba(0, 255, 136, 0.35);
+    border-radius: 16px;
+    background: rgba(0, 0, 0, 0.4);
     color: var(--neon-green);
-    font-size: 1.2rem;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
     user-select: none;
     -webkit-user-select: none;
+    touch-action: manipulation;
 }
 
 .touch-btn:active {
-    background: rgba(0, 255, 136, 0.2);
-    transform: scale(0.95);
+    background: rgba(0, 255, 136, 0.25);
+    border-color: var(--neon-green);
+    transform: scale(0.9);
+    box-shadow: 0 0 15px rgba(0, 255, 136, 0.4);
 }
 
 .touch-middle {
     display: flex;
-    gap: 5px;
+    gap: 6px;
+    align-items: center;
 }
 
 .touch-center {
-    width: 50px;
-    height: 50px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
-    opacity: 0.3;
-    cursor: default;
+    background: rgba(0, 255, 136, 0.1);
+    border: 1px solid rgba(0, 255, 136, 0.2);
 }
 
-/* 移动端显示触屏按钮 */
-@media (max-width: 768px) {
+/* 滑动方向指示器 */
+.swipe-indicator {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 2.5rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 10;
+}
+
+.swipe-indicator.active {
+    opacity: 0.6;
+}
+
+/* 移动端适配 */
+@media (max-width: 768px), (pointer: coarse) {
     .touch-controls {
         display: flex;
     }
@@ -427,16 +446,50 @@ body::before {
     }
     
     .status-bar {
-        gap: 10px;
-        padding: 8px;
+        gap: 8px;
+        padding: 6px 10px;
     }
     
     .status-item {
-        min-width: 55px;
+        min-width: 50px;
     }
     
     .status-value {
-        font-size: 1rem;
+        font-size: 0.95rem;
+    }
+    
+    .status-label {
+        font-size: 0.6rem;
+    }
+}
+
+/* 小屏手机适配 (< 400px) */
+@media (max-width: 400px) {
+    .touch-btn {
+        width: 56px;
+        height: 56px;
+    }
+    
+    .status-bar {
+        gap: 5px;
+        padding: 4px 6px;
+    }
+    
+    .status-item {
+        min-width: 42px;
+    }
+    
+    .status-value {
+        font-size: 0.85rem;
+    }
+    
+    .game-actions {
+        gap: 8px;
+    }
+    
+    .action-btn {
+        padding: 8px 16px;
+        font-size: 0.85rem;
     }
 }
 

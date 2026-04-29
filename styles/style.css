@@ -1,0 +1,898 @@
+/* ========== 基础样式与变量 ========== */
+:root {
+    --bg-primary: #0a0a1a;
+    --bg-secondary: #12122a;
+    --bg-card: #1a1a3e;
+    --bg-overlay: rgba(10, 10, 26, 0.95);
+    
+    --neon-green: #00ff88;
+    --neon-blue: #00d4ff;
+    --neon-pink: #ff2d95;
+    --neon-purple: #b829dd;
+    --neon-orange: #ff6b35;
+    --neon-yellow: #ffd700;
+    --neon-red: #ff3366;
+    
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0c0;
+    --text-accent: var(--neon-green);
+    
+    --border-glow: rgba(0, 255, 136, 0.3);
+    --shadow-glow: 0 0 20px rgba(0, 255, 136, 0.15);
+    
+    --font-main: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    
+    --grid-size: 20;
+    --cell-size: 20px;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: var(--font-main);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+/* 背景动态粒子效果 */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        radial-gradient(circle at 20% 50%, rgba(0, 212, 255, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, rgba(184, 41, 221, 0.08) 0%, transparent 50%),
+        radial-gradient(circle at 40% 20%, rgba(0, 255, 136, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: -1;
+    animation: bgPulse 8s ease-in-out infinite;
+}
+
+@keyframes bgPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ========== 游戏容器 ========== */
+#game-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+/* ========== 屏幕管理 ========== */
+.screen {
+    display: none;
+    width: 100%;
+    height: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.5s ease;
+}
+
+.screen.active {
+    display: flex;
+}
+
+.screen.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: var(--bg-overlay);
+    backdrop-filter: blur(10px);
+    z-index: 100;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ========== 标题区域 ========== */
+.game-header {
+    text-align: center;
+    margin-bottom: 30px;
+    animation: slideDown 0.8s ease;
+}
+
+.game-title {
+    font-size: 3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--neon-green), var(--neon-blue), var(--neon-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.3));
+    letter-spacing: 4px;
+    animation: titleGlow 3s ease-in-out infinite;
+}
+
+.game-subtitle {
+    font-size: 1.1rem;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    letter-spacing: 6px;
+    text-transform: uppercase;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes titleGlow {
+    0%, 100% { filter: drop-shadow(0 0 20px rgba(0, 255, 136, 0.3)); }
+    50% { filter: drop-shadow(0 0 40px rgba(0, 212, 255, 0.5)); }
+}
+
+/* ========== 难度选择界面 ========== */
+.difficulty-title {
+    font-size: 1.5rem;
+    color: var(--text-accent);
+    margin-bottom: 30px;
+    text-align: center;
+    letter-spacing: 2px;
+}
+
+.difficulty-cards {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 900px;
+}
+
+.diff-card {
+    width: 240px;
+    padding: 30px 20px;
+    background: var(--bg-card);
+    border: 2px solid transparent;
+    border-radius: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.diff-card::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: linear-gradient(
+        45deg,
+        transparent 30%,
+        rgba(255, 255, 255, 0.03) 50%,
+        transparent 70%
+    );
+    transform: rotate(45deg);
+    transition: all 0.5s ease;
+    opacity: 0;
+}
+
+.diff-card:hover::before {
+    opacity: 1;
+    animation: shimmer 1s ease;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%) translateY(-100%) rotate(45deg); }
+    100% { transform: translateX(100%) translateY(100%) rotate(45deg); }
+}
+
+.diff-card[data-level="1"] {
+    border-color: rgba(0, 255, 136, 0.3);
+    box-shadow: 0 0 30px rgba(0, 255, 136, 0.1);
+}
+
+.diff-card[data-level="1"]:hover {
+    border-color: var(--neon-green);
+    box-shadow: 0 0 40px rgba(0, 255, 136, 0.3);
+    transform: translateY(-5px);
+}
+
+.diff-card[data-level="2"] {
+    border-color: rgba(255, 107, 53, 0.3);
+    box-shadow: 0 0 30px rgba(255, 107, 53, 0.1);
+}
+
+.diff-card[data-level="2"]:hover {
+    border-color: var(--neon-orange);
+    box-shadow: 0 0 40px rgba(255, 107, 53, 0.3);
+    transform: translateY(-5px);
+}
+
+.diff-card[data-level="3"] {
+    border-color: rgba(255, 51, 102, 0.3);
+    box-shadow: 0 0 30px rgba(255, 51, 102, 0.1);
+}
+
+.diff-card[data-level="3"]:hover {
+    border-color: var(--neon-red);
+    box-shadow: 0 0 40px rgba(255, 51, 102, 0.3);
+    transform: translateY(-5px);
+}
+
+.diff-icon {
+    font-size: 3rem;
+    margin-bottom: 15px;
+    animation: bounce 2s ease infinite;
+}
+
+@keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
+}
+
+.diff-name {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+.diff-card[data-level="1"] .diff-name { color: var(--neon-green); }
+.diff-card[data-level="2"] .diff-name { color: var(--neon-orange); }
+.diff-card[data-level="3"] .diff-name { color: var(--neon-red); }
+
+.diff-time {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+
+.diff-rate {
+    font-size: 0.85rem;
+    padding: 4px 12px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.05);
+    margin-bottom: 10px;
+    display: inline-block;
+}
+
+.diff-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+}
+
+.cooldown-info {
+    margin-top: 30px;
+    padding: 15px 30px;
+    background: rgba(255, 51, 102, 0.1);
+    border: 1px solid rgba(255, 51, 102, 0.3);
+    border-radius: 15px;
+    color: var(--neon-red);
+    font-size: 1rem;
+    text-align: center;
+    animation: pulse 2s ease infinite;
+    display: none;
+}
+
+.cooldown-info.active {
+    display: block;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+/* ========== 游戏界面 ========== */
+#game-screen {
+    padding: 10px;
+    justify-content: flex-start;
+}
+
+.status-bar {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    background: var(--bg-card);
+    border-radius: 15px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border-glow);
+    box-shadow: var(--shadow-glow);
+    width: 100%;
+    max-width: 600px;
+}
+
+.status-item {
+    text-align: center;
+    min-width: 70px;
+}
+
+.status-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+}
+
+.status-value {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--neon-green);
+    font-family: 'Courier New', monospace;
+}
+
+#remaining-time {
+    color: var(--neon-orange);
+}
+
+.canvas-wrapper {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 2px solid var(--border-glow);
+    box-shadow: 
+        0 0 30px rgba(0, 255, 136, 0.1),
+        inset 0 0 30px rgba(0, 255, 136, 0.02);
+}
+
+#game-canvas {
+    display: block;
+    background: var(--bg-secondary);
+    border-radius: 18px;
+}
+
+/* 触屏控制按钮 */
+.touch-controls {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    opacity: 0.7;
+}
+
+.touch-btn {
+    width: 50px;
+    height: 50px;
+    border: 2px solid rgba(0, 255, 136, 0.4);
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.5);
+    color: var(--neon-green);
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.touch-btn:active {
+    background: rgba(0, 255, 136, 0.2);
+    transform: scale(0.95);
+}
+
+.touch-middle {
+    display: flex;
+    gap: 5px;
+}
+
+.touch-center {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    opacity: 0.3;
+    cursor: default;
+}
+
+/* 移动端显示触屏按钮 */
+@media (max-width: 768px) {
+    .touch-controls {
+        display: flex;
+    }
+    
+    .game-title {
+        font-size: 2rem;
+    }
+    
+    .difficulty-cards {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .diff-card {
+        width: 280px;
+    }
+    
+    .status-bar {
+        gap: 10px;
+        padding: 8px;
+    }
+    
+    .status-item {
+        min-width: 55px;
+    }
+    
+    .status-value {
+        font-size: 1rem;
+    }
+}
+
+.controls-hint {
+    margin-top: 10px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    text-align: center;
+}
+
+.hint-pc { display: inline; }
+.hint-mobile { display: none; }
+
+@media (max-width: 768px) {
+    .hint-pc { display: none; }
+    .hint-mobile { display: inline; }
+}
+
+.game-actions {
+    display: flex;
+    gap: 15px;
+    margin-top: 15px;
+}
+
+/* ========== 通用按钮样式 ========== */
+.action-btn {
+    padding: 12px 30px;
+    font-size: 1rem;
+    font-weight: 600;
+    border: 2px solid var(--neon-green);
+    border-radius: 12px;
+    background: rgba(0, 255, 136, 0.1);
+    color: var(--neon-green);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: var(--font-main);
+    letter-spacing: 1px;
+}
+
+.action-btn:hover {
+    background: rgba(0, 255, 136, 0.2);
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+    transform: translateY(-2px);
+}
+
+.action-btn:active {
+    transform: translateY(0);
+}
+
+.action-btn.secondary {
+    border-color: var(--text-secondary);
+    background: rgba(160, 160, 192, 0.1);
+    color: var(--text-secondary);
+}
+
+.action-btn.secondary:hover {
+    border-color: var(--neon-blue);
+    color: var(--neon-blue);
+    background: rgba(0, 212, 255, 0.1);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.2);
+}
+
+.action-btn.share {
+    border-color: var(--neon-purple);
+    background: rgba(184, 41, 221, 0.1);
+    color: var(--neon-purple);
+}
+
+.action-btn.share:hover {
+    background: rgba(184, 41, 221, 0.2);
+    box-shadow: 0 0 20px rgba(184, 41, 221, 0.3);
+}
+
+/* ========== 开始倒计时 ========== */
+.overlay-countdown {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 6rem;
+    font-weight: 800;
+    color: var(--neon-green);
+    text-shadow: 0 0 40px rgba(0, 255, 136, 0.5);
+    animation: countPulse 1s ease infinite;
+    display: none;
+    z-index: 50;
+}
+
+.overlay-countdown.active {
+    display: block;
+}
+
+@keyframes countPulse {
+    0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.8; }
+    100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+}
+
+/* ========== 结束界面 ========== */
+#result-screen .overlay-content {
+    text-align: center;
+    max-width: 450px;
+    width: 90%;
+    padding: 40px;
+    background: var(--bg-card);
+    border-radius: 25px;
+    border: 2px solid var(--border-glow);
+    box-shadow: var(--shadow-glow);
+    animation: resultIn 0.6s ease;
+}
+
+@keyframes resultIn {
+    from { opacity: 0; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.result-icon {
+    font-size: 4rem;
+    margin-bottom: 15px;
+    animation: iconBounce 1s ease;
+}
+
+@keyframes iconBounce {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+}
+
+#result-title {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    background: linear-gradient(135deg, var(--neon-green), var(--neon-blue));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.result-message {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    margin-bottom: 25px;
+    line-height: 1.6;
+    padding: 15px;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    border-left: 3px solid var(--neon-green);
+}
+
+.result-stats {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+}
+
+.stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--neon-green);
+    font-family: 'Courier New', monospace;
+}
+
+#result-screen .action-btn {
+    margin: 8px;
+    min-width: 160px;
+}
+
+/* ========== 文案弹窗 ========== */
+.quote-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    z-index: 200;
+    opacity: 0;
+    transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    pointer-events: none;
+}
+
+.quote-popup.active {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.quote-content {
+    background: var(--bg-card);
+    border: 2px solid var(--neon-purple);
+    border-radius: 20px;
+    padding: 30px 40px;
+    max-width: 400px;
+    text-align: center;
+    box-shadow: 
+        0 0 40px rgba(184, 41, 221, 0.3),
+        0 10px 40px rgba(0, 0, 0, 0.3);
+    position: relative;
+    animation: quoteFloat 3s ease-in-out infinite;
+}
+
+@keyframes quoteFloat {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+}
+
+.quote-icon {
+    font-size: 2.5rem;
+    margin-bottom: 15px;
+}
+
+.quote-text {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    color: var(--text-primary);
+    font-style: italic;
+}
+
+.quote-close {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.quote-close:hover {
+    color: var(--neon-red);
+}
+
+/* ========== 冷却界面 ========== */
+#cooldown-overlay .overlay-content {
+    text-align: center;
+}
+
+.cooldown-icon {
+    font-size: 4rem;
+    margin-bottom: 20px;
+    animation: shake 1s ease infinite;
+}
+
+@keyframes shake {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-10deg); }
+    75% { transform: rotate(10deg); }
+}
+
+.cooldown-timer {
+    font-size: 4rem;
+    font-weight: 800;
+    color: var(--neon-red);
+    font-family: 'Courier New', monospace;
+    margin: 20px 0;
+    text-shadow: 0 0 30px rgba(255, 51, 102, 0.5);
+    animation: timerPulse 1s ease infinite;
+}
+
+@keyframes timerPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.cooldown-hint {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+/* ========== Toast 提示 ========== */
+.toast {
+    position: fixed;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    padding: 12px 30px;
+    background: var(--bg-card);
+    border: 1px solid var(--neon-green);
+    border-radius: 25px;
+    color: var(--neon-green);
+    font-size: 0.95rem;
+    z-index: 300;
+    opacity: 0;
+    transition: all 0.4s ease;
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.2);
+}
+
+.toast.active {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+/* ========== 暂停界面 ========== */
+#pause-screen .overlay-content {
+    text-align: center;
+}
+
+#pause-screen h2 {
+    font-size: 2rem;
+    margin-bottom: 30px;
+    color: var(--neon-blue);
+}
+
+#pause-screen .action-btn {
+    margin: 10px;
+    min-width: 180px;
+}
+
+/* ========== 画布特效类 ========== */
+.particle {
+    position: absolute;
+    pointer-events: none;
+    border-radius: 50%;
+    animation: particleFade 1s ease forwards;
+}
+
+@keyframes particleFade {
+    0% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0); }
+}
+
+/* 轨迹效果 */
+.trail {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: trailFade 0.5s ease forwards;
+}
+
+@keyframes trailFade {
+    0% { opacity: 0.5; }
+    100% { opacity: 0; }
+}
+
+/* 食物闪烁动画 */
+.food-glow {
+    animation: foodPulse 0.8s ease infinite;
+}
+
+@keyframes foodPulse {
+    0%, 100% { box-shadow: 0 0 10px currentColor; }
+    50% { box-shadow: 0 0 25px currentColor; }
+}
+
+/* 勝利特效 */
+.victory-effect {
+    animation: victoryBurst 1s ease forwards;
+}
+
+@keyframes victoryBurst {
+    0% { transform: scale(0); opacity: 1; }
+    100% { transform: scale(3); opacity: 0; }
+}
+
+/* 失败特效 */
+.defeat-effect {
+    animation: defeatShake 0.5s ease;
+}
+
+@keyframes defeatShake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-10px); }
+    40% { transform: translateX(10px); }
+    60% { transform: translateX(-10px); }
+    80% { transform: translateX(10px); }
+}
+
+/* 滑动提示 */
+.swipe-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 1rem;
+    color: var(--text-secondary);
+    opacity: 0;
+    animation: swipeHint 2s ease;
+    pointer-events: none;
+}
+
+@keyframes swipeHint {
+    0% { opacity: 0; }
+    30% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* 响应式调整 */
+@media (max-height: 700px) {
+    .game-header {
+        margin-bottom: 15px;
+    }
+    
+    .game-title {
+        font-size: 1.8rem;
+    }
+    
+    .diff-card {
+        padding: 20px 15px;
+    }
+    
+    .status-bar {
+        margin-bottom: 10px;
+    }
+    
+    .game-actions {
+        margin-top: 10px;
+    }
+}
+
+/* 滚动条美化 */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--border-glow);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--neon-green);
+}
+
+/* 选择禁用状态 */
+.diff-card.disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    filter: grayscale(0.8);
+}
+
+/* 游戏画布闪烁效果（危险预警） */
+@keyframes dangerFlash {
+    0%, 100% { box-shadow: 0 0 30px rgba(255, 51, 102, 0.1); }
+    50% { box-shadow: 0 0 40px rgba(255, 51, 102, 0.4); }
+}
+
+.canvas-wrapper.danger {
+    animation: dangerFlash 1s ease infinite;
+    border-color: rgba(255, 51, 102, 0.5);
+}

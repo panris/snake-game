@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="description" content="超酷炫动感的H5贪吃蛇游戏 - 经典玩法，分级难度，挑战极限">
+    <title>🐍 贪吃蛇 - 极限挑战</title>
+    <link rel="stylesheet" href="styles/style.css">
+</head>
+<body>
+    <!-- 游戏主容器 -->
+    <div id="game-container">
+        <!-- 标题区域 -->
+        <header class="game-header">
+            <h1 class="game-title">🐍 贪吃蛇</h1>
+            <p class="game-subtitle">极限挑战 · 酷炫动感</p>
+        </header>
+
+        <!-- 难度选择界面 -->
+        <div id="difficulty-screen" class="screen active">
+            <div class="difficulty-title">选择挑战难度</div>
+            <div class="difficulty-cards">
+                <div class="diff-card" data-level="1">
+                    <div class="diff-icon">🎯</div>
+                    <div class="diff-name">简单模式</div>
+                    <div class="diff-time">9分钟</div>
+                    <div class="diff-rate">通过率: 1%</div>
+                    <div class="diff-desc">适合新手入门</div>
+                </div>
+                <div class="diff-card" data-level="2">
+                    <div class="diff-icon">⚡</div>
+                    <div class="diff-name">中等模式</div>
+                    <div class="diff-time">5分钟</div>
+                    <div class="diff-rate">通过率: 1‱</div>
+                    <div class="diff-desc">考验反应速度</div>
+                </div>
+                <div class="diff-card" data-level="3">
+                    <div class="diff-icon">🔥</div>
+                    <div class="diff-name">困难模式</div>
+                    <div class="diff-time">2分钟</div>
+                    <div class="diff-rate">通过率: 1‱‱</div>
+                    <div class="diff-desc">真正的极限挑战</div>
+                </div>
+            </div>
+            <div class="cooldown-info" id="cooldown-info"></div>
+        </div>
+
+        <!-- 游戏主界面 -->
+        <div id="game-screen" class="screen">
+            <!-- 顶部状态栏 -->
+            <div class="status-bar">
+                <div class="status-item">
+                    <span class="status-label">难度</span>
+                    <span id="current-difficulty" class="status-value">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">得分</span>
+                    <span id="score" class="status-value">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">长度</span>
+                    <span id="length" class="status-value">3</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">已用时间</span>
+                    <span id="elapsed-time" class="status-value">00:00</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">剩余时间</span>
+                    <span id="remaining-time" class="status-value">00:00</span>
+                </div>
+            </div>
+
+            <!-- 游戏画布 -->
+            <div class="canvas-wrapper">
+                <canvas id="game-canvas"></canvas>
+                
+                <!-- 屏幕上控制按钮（移动端） -->
+                <div class="touch-controls" id="touch-controls">
+                    <button class="touch-btn touch-up" data-dir="up">▲</button>
+                    <div class="touch-middle">
+                        <button class="touch-btn touch-left" data-dir="left">◀</button>
+                        <button class="touch-btn touch-center">●</button>
+                        <button class="touch-btn touch-right" data-dir="right">▶</button>
+                    </div>
+                    <button class="touch-btn touch-down" data-dir="down">▼</button>
+                </div>
+
+                <!-- 开始倒计时 -->
+                <div id="start-countdown" class="overlay-countdown">3</div>
+            </div>
+
+            <!-- 底部操作提示 -->
+            <div class="controls-hint">
+                <span class="hint-pc">🔹 PC: 方向键 / WASD 控制</span>
+                <span class="hint-mobile">🔹 手机: 滑动屏幕或按钮控制</span>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="game-actions">
+                <button id="pause-btn" class="action-btn">⏸ 暂停</button>
+                <button id="quit-btn" class="action-btn secondary">🔙 返回</button>
+            </div>
+        </div>
+
+        <!-- 暂停界面 -->
+        <div id="pause-screen" class="screen overlay">
+            <div class="overlay-content">
+                <h2>⏸ 游戏暂停</h2>
+                <button id="resume-btn" class="action-btn">▶ 继续游戏</button>
+                <button id="quit-pause-btn" class="action-btn secondary">🔙 返回主菜单</button>
+            </div>
+        </div>
+
+        <!-- 结束界面 -->
+        <div id="result-screen" class="screen overlay">
+            <div class="overlay-content">
+                <div id="result-icon" class="result-icon"></div>
+                <h2 id="result-title"></h2>
+                <p id="result-message" class="result-message"></p>
+                <div class="result-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">最终得分</span>
+                        <span id="final-score" class="stat-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">蛇身长度</span>
+                        <span id="final-length" class="stat-value">0</span>
+                    </div>
+                        <div class="stat-item">
+                        <span class="stat-label">用时</span>
+                        <span id="final-time" class="stat-value">00:00</span>
+                    </div>
+                </div>
+                <button id="restart-btn" class="action-btn">🔄 再玩一次</button>
+                <button id="share-btn" class="action-btn share">📤 分享游戏</button>
+                <button id="result-quit-btn" class="action-btn secondary">🔙 返回主菜单</button>
+            </div>
+        </div>
+
+        <!-- 文案弹窗 -->
+        <div id="quote-popup" class="quote-popup">
+            <div class="quote-content">
+                <div class="quote-icon"></div>
+                <p id="quote-text" class="quote-text"></p>
+                <button id="quote-close" class="quote-close">✕</button>
+            </div>
+        </div>
+
+        <!-- 冷却倒计时提示 -->
+        <div id="cooldown-overlay" class="screen overlay">
+            <div class="overlay-content">
+                <div class="cooldown-icon">⏳</div>
+                <h2>冷却中...</h2>
+                <p>您已连续失败 3 次，请稍休息一下</p>
+                <div class="cooldown-timer" id="cooldown-timer">02:00</div>
+                <p class="cooldown-hint">冷却结束后可继续挑战</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分享提示 -->
+    <div id="share-toast" class="toast"></div>
+
+    <!-- 分层架构引用：核心层(Core) → 引擎层(Engine) -->
+    <script src="src/core/utils.js"></script>
+    <script src="src/core/food.js"></script>
+    <script src="src/core/snake.js"></script>
+    <script src="src/engine/game.js"></script>
+</body>
+</html>

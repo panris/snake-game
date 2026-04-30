@@ -94,8 +94,8 @@ class Food {
      * 检查食物是否过期（特殊食物有时效）
      */
     isExpired() {
-        const config = this.types[this.type];
-        if (!config.duration) return false;
+        const config = this.types[this.type] || this.types['normal'];
+        if (!config || !config.duration) return false;
         return Date.now() - this.spawnTime > config.duration;
     }
 
@@ -103,7 +103,13 @@ class Food {
      * 获取食物配置
      */
     getConfig() {
-        return this.types[this.type];
+        const config = this.types[this.type];
+        if (!config) {
+            console.error('[Food.getConfig] 未找到配置! type:', this.type, '可用类型:', Object.keys(this.types));
+            // 降级到 normal 类型
+            return this.types['normal'];
+        }
+        return config;
     }
 
     /**
@@ -117,7 +123,11 @@ class Food {
      * 绘制食物
      */
     draw(ctx) {
-        const config = this.types[this.type];
+        const config = this.types[this.type] || this.types['normal'];
+        if (!config) {
+            console.error('[Food.draw] 无法获取配置, type:', this.type);
+            return;
+        }
         const x = this.position.x * this.cellSize + this.cellSize / 2;
         const y = this.position.y * this.cellSize + this.cellSize / 2;
         const radius = this.cellSize * 0.35;

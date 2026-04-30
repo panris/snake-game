@@ -380,7 +380,7 @@ body::before {
 
 /* 触屏控制按钮 - 独立区域 */
 .touch-controls {
-    display: none !important;
+    display: none;
     flex-direction: column;
     align-items: center;
     gap: 6px;
@@ -448,7 +448,7 @@ body::before {
 /* 移动端适配 */
 @media (max-width: 768px), (pointer: coarse) {
     .touch-controls {
-        display: flex;
+        display: flex !important;
     }
     
     .game-title {

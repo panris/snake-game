@@ -311,7 +311,22 @@ class SnakeGame {
         this.generateObstacles();
 
         // 创建食物
-        this.food = new Food(this.gridW, this.gridH, this.cellSize, this.difficultyConfigs[this.difficulty].food || {});
+        const diffConfig = this.difficultyConfigs[this.difficulty];
+        if (!diffConfig) {
+            console.error('startGame: 难度配置不存在, difficulty:', this.difficulty);
+            this.handleDefeat('游戏配置异常');
+            return;
+        }
+        const foodConfig = diffConfig.food || {};
+        this.food = new Food(this.gridW, this.gridH, this.cellSize, foodConfig);
+        
+        // 验证食物对象
+        if (!this.food) {
+            console.error('startGame: Food 对象创建失败');
+            this.handleDefeat('游戏初始化失败');
+            return;
+        }
+        
         const initSpawn = this.food.spawn(this.snake.getFullBody(), this.obstacles);
         if (!initSpawn) {
             console.error('初始食物生成失败，棋盘异常');
@@ -335,6 +350,10 @@ class SnakeGame {
      */
     generateObstacles() {
         const config = this.difficultyConfigs[this.difficulty];
+        if (!config) {
+            console.error('[generateObstacles] 难度配置不存在, difficulty:', this.difficulty);
+            return;
+        }
         if (config.obstacleCount === 0) return;
 
         const occupied = new Set();

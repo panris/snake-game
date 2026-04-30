@@ -311,7 +311,7 @@ class SnakeGame {
         this.generateObstacles();
 
         // 创建食物
-        this.food = new Food(this.gridW, this.gridH, this.cellSize, config.food || {});
+        this.food = new Food(this.gridW, this.gridH, this.cellSize, this.difficultyConfigs[this.difficulty].food || {});
         const initSpawn = this.food.spawn(this.snake.getFullBody(), this.obstacles);
         if (!initSpawn) {
             console.error('初始食物生成失败，棋盘异常');

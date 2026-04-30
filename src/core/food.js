@@ -3,7 +3,7 @@
  * 管理食物的生成、类型和视觉效果
  */
 class Food {
-    constructor(gridWidth, gridHeight, cellSize) {
+    constructor(gridWidth, gridHeight, cellSize, foodConfig = {}) {
         this.gridW = gridWidth;
         this.gridH = gridHeight;
         this.cellSize = cellSize;
@@ -12,31 +12,22 @@ class Food {
         this.spawnTime = 0;
         this.glowPhase = 0;
 
-        // 食物类型配置
+        // 食物类型配置（支持难度定制）
+        const defaults = {
+            normal:  { score: 10, grow: 1,       probability: 0.8,  duration: 0 },
+            bonus:   { score: 30, grow: 2,       probability: 0.15, duration: 8000 },
+            speed:   { score: 20, grow: 1,       probability: 0.05, duration: 5000 }
+        };
+        const merge = (base, over) => Object.assign({}, base, over);
+
+        const norm = merge(defaults.normal,  foodConfig.normal  || {});
+        const bon  = merge(defaults.bonus,   foodConfig.bonus   || {});
+        const spd  = merge(defaults.speed,   foodConfig.speed   || {});
+
         this.types = {
-            normal: {
-                color: '#00ff88',
-                glowColor: 'rgba(0, 255, 136, 0.5)',
-                score: 10,
-                grow: 1,
-                probability: 0.8
-            },
-            bonus: {
-                color: '#ffd700',
-                glowColor: 'rgba(255, 215, 0, 0.6)',
-                score: 30,
-                grow: 2,
-                probability: 0.15,
-                duration: 8000 // 8秒后消失
-            },
-            speed: {
-                color: '#ff2d95',
-                glowColor: 'rgba(255, 45, 149, 0.5)',
-                score: 20,
-                grow: 1,
-                probability: 0.05,
-                duration: 5000 // 5秒后消失
-            }
+            normal: { color: '#00ff88', glowColor: 'rgba(0,255,136,0.5)',  ...norm },
+            bonus:  { color: '#ffd700', glowColor: 'rgba(255,215,0,0.6)', ...bon },
+            speed:  { color: '#ff2d95', glowColor: 'rgba(255,45,149,0.5)', ...spd }
         };
     }
 

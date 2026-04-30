@@ -1,0 +1,18 @@
+{
+  "name": "🐍 贪吃蛇 - 极限挑战",
+  "short_name": "贪吃蛇",
+  "description": "超酷炫动感的H5贪吃蛇游戏 - 经典玩法，分级难度，挑战极限",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0a1a",
+  "theme_color": "#0a0a1a",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' fill='%230a0a1a'/><circle cx='256' cy='256' r='180' fill='%2300ff88'/><circle cx='256' cy='256' r='120' fill='%230a0a1a'/><circle cx='310' cy='210' r='25' fill='white'/><circle cx='310' cy='210' r='12' fill='black'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

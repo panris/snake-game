@@ -380,7 +380,7 @@ body::before {
 
 /* 触屏控制按钮 - 独立区域 */
 .touch-controls {
-    display: none;
+    display: none !important;
     flex-direction: column;
     align-items: center;
     gap: 6px;

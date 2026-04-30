@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="description" content="超酷炫动感的H5贪吃蛇游戏 - 经典玩法，分级难度，挑战极限">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0a1a">
     <title>🐍 贪吃蛇 - 极限挑战</title>
     <link rel="stylesheet" href="styles/style.css">
 </head>
@@ -178,5 +180,14 @@
     <script src="src/core/food.js"></script>
     <script src="src/core/snake.js"></script>
     <script src="src/engine/game.js"></script>
+
+    <!-- PWA: 注册 Service Worker -->
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js')
+            .then(reg => console.log('[SW] Registered:', reg.scope))
+            .catch(err => console.warn('[SW] Failed:', err));
+    }
+    </script>
 </body>
 </html>

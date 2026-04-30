@@ -41,7 +41,12 @@ class SnakeGame {
                 targetLength: 20,
                 obstacleCount: 0,
                 obstacleComplexity: 0,
-                passRate: '1%'
+                passRate: '1%',
+                food: {
+                    normal: { score: 10, grow: 1 },
+                    bonus: { score: 30, grow: 2, duration: 12000 },
+                    speed: { score: 20, grow: 1, duration: 6000 }
+                }
             },
             2: {
                 name: '中等模式',
@@ -51,7 +56,12 @@ class SnakeGame {
                 targetLength: 35,
                 obstacleCount: 5,
                 obstacleComplexity: 1,
-                passRate: '1‱'
+                passRate: '1‱',
+                food: {
+                    normal: { score: 15, grow: 1 },
+                    bonus: { score: 40, grow: 2, duration: 9000 },
+                    speed: { score: 25, grow: 1, duration: 5000 }
+                }
             },
             3: {
                 name: '困难模式',
@@ -61,7 +71,12 @@ class SnakeGame {
                 targetLength: 50,
                 obstacleCount: 12,
                 obstacleComplexity: 2,
-                passRate: '1‱‱'
+                passRate: '1‱‱',
+                food: {
+                    normal: { score: 20, grow: 1 },
+                    bonus: { score: 50, grow: 2, duration: 7000 },
+                    speed: { score: 30, grow: 1, duration: 4000 }
+                }
             }
         };
 
@@ -296,7 +311,7 @@ class SnakeGame {
         this.generateObstacles();
 
         // 创建食物
-        this.food = new Food(this.gridW, this.gridH, this.cellSize);
+        this.food = new Food(this.gridW, this.gridH, this.cellSize, config.food || {});
         const initSpawn = this.food.spawn(this.snake.getFullBody(), this.obstacles);
         if (!initSpawn) {
             console.error('初始食物生成失败，棋盘异常');
@@ -503,8 +518,8 @@ class SnakeGame {
                 return;
             }
             const targetLength = diffConfig.targetLength;
-            console.log('[updateGame] 胜利检查: 蛇长度=', this.snake.getLength(), '目标长度+3=', targetLength+3, '难度:', this.difficulty);
-            if (this.snake.getLength() >= targetLength + 3) {
+            console.log('[updateGame] 胜利检查: 蛇长度=', this.snake.getLength(), '目标长度=', targetLength, '难度:', this.difficulty);
+            if (this.snake.getLength() >= targetLength) {
                 this.handleVictory();
                 return;
             }
@@ -893,8 +908,10 @@ class SnakeGame {
         if (result.success) {
             if (result.method === 'native') {
                 Utils.showToast('分享成功！');
-            } else {
+            } else if (result.method === 'clipboard') {
                 Utils.showToast('链接已复制到剪贴板，快去分享吧！');
+            } else {
+                Utils.showToast('已选中链接，快去分享吧！');
             }
         } else {
             Utils.showToast('分享失败，请手动复制链接');

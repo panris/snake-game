@@ -141,15 +141,19 @@ const Utils = {
             return { success: true, method: 'clipboard' };
         } catch (err) {
             // 最后降级：选中复制
-            const textarea = document.createElement('textarea');
-            textarea.value = shareData.url;
-            textarea.style.position = 'fixed';
-            textarea.style.opacity = '0';
-            document.body.appendChild(textarea);
-            textarea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textarea);
-            return { success: true, method: 'fallback' };
+            try {
+                const textarea = document.createElement('textarea');
+                textarea.value = shareData.url;
+                textarea.style.position = 'fixed';
+                textarea.style.opacity = '0';
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                return { success: true, method: 'fallback' };
+            } catch (fallbackErr) {
+                return { success: false, method: 'none', error: fallbackErr };
+            }
         }
     },
 

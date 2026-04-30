@@ -300,8 +300,15 @@ body::before {
 /* ========== 游戏界面 ========== */
 #game-screen {
     padding: 8px;
+    display: flex;
+    flex-direction: column;
     justify-content: flex-start;
-    overflow: hidden;
+    overflow-y: auto;
+    /* 移动端填充整个屏幕 */
+    height: 100%;
+    box-sizing: border-box;
+    /* 确保 flex 子项不溢出 */
+    min-height: 0;
 }
 
 .status-bar {
@@ -353,12 +360,22 @@ body::before {
     box-shadow: 
         0 0 30px rgba(0, 255, 136, 0.1),
         inset 0 0 30px rgba(0, 255, 136, 0.02);
+    /* 移动端：占据剩余空间，不撑破屏幕 */
+    flex: 1 1 auto;
+    min-height: 0;
+    /* 内容居中 */
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 #game-canvas {
     display: block;
     background: var(--bg-secondary);
     border-radius: 18px;
+    /* 移动端画布自适应 wrapper 尺寸 */
+    max-width: 100%;
+    max-height: 100%;
 }
 
 /* 触屏控制按钮 - 独立区域 */
@@ -367,8 +384,10 @@ body::before {
     flex-direction: column;
     align-items: center;
     gap: 6px;
-    padding: 10px 0;
+    padding: 8px 0;
     flex-shrink: 0;
+    /* 移动端优先显示 */
+    min-height: 0;
 }
 
 .touch-btn {

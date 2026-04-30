@@ -58,24 +58,13 @@ class Food {
             occupied.add(`${obs.x},${obs.y}`);
         });
 
-        // 找到所有可用位置（排除边界格子，避免吃到后撞墙）
-        // 同时检查：上下左右至少有一个方向被阻挡（蛇身/障碍物/边界），避免食物在开阔区域孤立出现
+        // 找到所有可用位置
+        // 排除蛇身和障碍物占用格，以及边界（避免蛇吃到边界边的食物时撞墙）
         const available = [];
         for (let x = 1; x < this.gridW - 1; x++) {
             for (let y = 1; y < this.gridH - 1; y++) {
                 if (occupied.has(`${x},${y}`)) continue;
-
-                // 检查四个方向是否至少有一个被阻挡
-                const blocked = {
-                    up:    y === 1          || occupied.has(`${x},${y - 1}`),
-                    down:  y === this.gridH - 2 || occupied.has(`${x},${y + 1}`),
-                    left:  x === 1          || occupied.has(`${x - 1},${y}`),
-                    right: x === this.gridW - 2 || occupied.has(`${x + 1},${y}`),
-                };
-
-                if (blocked.up || blocked.down || blocked.left || blocked.right) {
-                    available.push({ x, y });
-                }
+                available.push({ x, y });
             }
         }
 

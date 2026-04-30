@@ -495,7 +495,8 @@ class SnakeGame {
                 }
             }
 
-            // 检查胜利条件
+            // 【关键】胜利判定必须在所有食物逻辑之后，
+            // 确保本次吃的食物得分/特效/新食物都处理完毕再展示胜利
             const diffConfig = this.difficultyConfigs[this.difficulty];
             if (!diffConfig) {
                 this.handleDefeat('难度配置异常，游戏终止');

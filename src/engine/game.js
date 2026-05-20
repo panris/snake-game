@@ -342,7 +342,10 @@ class SnakeGame {
 
         // 启动游戏循环（先清理旧循环，避免重复 RAF 导致一帧内多次移动/吃食物后立即死亡）
         this.stopLoops();
-        this.lastFrameTime = performance.now();
+        // ⚠️ lastFrameTime 必须在 RAF 回调内部设置，不能提前设！
+        // 提前设置会导致第一帧 deltaTime 异常（可能包含 countdown → playing 切换的间隔），
+        // 在困难模式(moveInterval=75ms)下可能一帧触发多次 updateGame，导致开局立即死亡
+        this._gameLoopFirstFrame = true;
         this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
         this.timerInterval = setInterval(() => this.updateTimer(), 100);
     }
@@ -432,6 +435,11 @@ class SnakeGame {
         if (this.state !== 'playing') return;
 
         try {
+            // 首帧：初始化 lastFrameTime，deltaTime 为 0（避免首帧异常移动）
+            if (this._gameLoopFirstFrame) {
+                this._gameLoopFirstFrame = false;
+                this.lastFrameTime = timestamp;
+            }
             const deltaTime = timestamp - this.lastFrameTime;
             this.lastFrameTime = timestamp;
 

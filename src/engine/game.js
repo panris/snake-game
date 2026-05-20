@@ -277,12 +277,15 @@ class SnakeGame {
         countdownEl.classList.add('active');
 
         for (let i = 3; i > 0; i--) {
+            if (this.state !== 'countdown') return;
             countdownEl.textContent = i;
             await Utils.sleep(1000);
         }
 
+        if (this.state !== 'countdown') return;
         countdownEl.textContent = 'GO!';
         await Utils.sleep(500);
+        if (this.state !== 'countdown') return;
         countdownEl.classList.remove('active');
 
         this.startGame();
@@ -337,12 +340,25 @@ class SnakeGame {
         // 更新显示
         this.updateStatusBar();
 
-        // 启动游戏循环
+        // 启动游戏循环（先清理旧循环，避免重复 RAF 导致一帧内多次移动/吃食物后立即死亡）
+        this.stopLoops();
         this.lastFrameTime = performance.now();
         this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
-
-        // 启动计时器
         this.timerInterval = setInterval(() => this.updateTimer(), 100);
+    }
+
+    /**
+     * 停止游戏循环与计时器
+     */
+    stopLoops() {
+        if (this.gameLoopId != null) {
+            cancelAnimationFrame(this.gameLoopId);
+            this.gameLoopId = null;
+        }
+        if (this.timerInterval != null) {
+            clearInterval(this.timerInterval);
+            this.timerInterval = null;
+        }
     }
 
     /**
@@ -424,8 +440,9 @@ class SnakeGame {
             const moveInterval = this.difficultyConfigs[this.difficulty].moveInterval;
 
             if (this.moveAccumulator >= moveInterval) {
-                this.moveAccumulator = 0;
+                this.moveAccumulator -= moveInterval;
                 this.updateGame();
+                if (this.state !== 'playing') return;
             }
 
             // 更新动画
@@ -439,7 +456,9 @@ class SnakeGame {
             this.showResult('defeat', '游戏出错', err.message);
         }
 
-        this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
+        if (this.state === 'playing') {
+            this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
+        }
     }
 
     /**
@@ -453,10 +472,6 @@ class SnakeGame {
             this.snake.move();
 
             const head = this.snake.getHead();
-            const foodPos = this.food.getPosition();
-
-            // 调试日志：追踪位置和碰撞
-            console.log('[updateGame] 蛇头:', head, '| 食物:', foodPos, '| 蛇长:', this.snake.getLength());
 
             // 检查边界碰撞
             const inBoundary = this.snake.checkBoundary(this.gridW, this.gridH);
@@ -486,19 +501,14 @@ class SnakeGame {
             // 检查食物碰撞
             if (this.snake.checkFoodCollision(this.food.getPosition())) {
                 const config = this.food.getConfig();
-                
-                // 验证：食物位置不应该和障碍物重叠
                 const foodPos = this.food.getPosition();
+
+                // 仅检测食物是否与障碍物重叠（蛇头在食物格是正常的）
                 const foodOnObstacle = this.obstacles.some(obs => obs.x === foodPos.x && obs.y === foodPos.y);
-                const foodOnSnake = this.snake.getFullBody().some(seg => seg.x === foodPos.x && seg.y === foodPos.y);
-                
-                if (foodOnObstacle || foodOnSnake) {
-                    console.error('[updateGame] ❗️食物位置异常! 食物:', foodPos, '在障碍物上:', foodOnObstacle, '在蛇身上:', foodOnSnake);
-                    console.error('[updateGame] 障碍物:', JSON.stringify(this.obstacles));
-                    console.error('[updateGame] 蛇身:', JSON.stringify(this.snake.getFullBody()));
+                if (foodOnObstacle) {
+                    console.error('[updateGame] 食物与障碍物重叠:', foodPos);
                 }
-                
-                console.log('[updateGame] 吃到食物! 蛇头:', this.snake.getHead(), '食物:', foodPos, '食物类型:', this.food.type);
+
                 if (!config) {
                     console.error('[updateGame] config 为 null! food.type:', this.food.type);
                     this.handleDefeat('食物配置异常');
@@ -512,7 +522,6 @@ class SnakeGame {
 
                 // 生成新食物
                 const spawnOk = this.food.spawn(this.snake.getFullBody(), this.obstacles);
-                console.log('[updateGame] 新食物生成结果:', spawnOk, '| 棋盘:', this.gridW, 'x', this.gridH);
                 if (!spawnOk) {
                     // 棋盘已满无法生成新食物，游戏结束（非胜利）
                     this.handleDefeat('棋盘已满，无法继续！');
@@ -537,10 +546,13 @@ class SnakeGame {
                 return;
             }
             const targetLength = diffConfig.targetLength;
-            console.log('[updateGame] 胜利检查: 蛇长度=', this.snake.getLength(), '目标长度=', targetLength, '难度:', this.difficulty);
             if (this.snake.getLength() >= targetLength) {
                 this.handleVictory();
                 return;
+            }
+
+            if (this.food) {
+                this.food.clearJustSpawned();
             }
 
             this.updateStatusBar();
@@ -784,14 +796,7 @@ class SnakeGame {
      */
     endGame() {
         this.state = 'gameover';
-        if (this.gameLoopId) {
-            cancelAnimationFrame(this.gameLoopId);
-            this.gameLoopId = null;
-        }
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
+        this.stopLoops();
         if (this.snake) {
             this.snake.die();
         }
@@ -870,14 +875,8 @@ class SnakeGame {
     pauseGame() {
         if (this.state !== 'playing') return;
         this.state = 'paused';
-        if (this.gameLoopId) {
-            cancelAnimationFrame(this.gameLoopId);
-            this.gameLoopId = null;
-        }
-        if (this.timerInterval) {
-            clearInterval(this.timerInterval);
-            this.timerInterval = null;
-        }
+        this.pauseStartedAt = Date.now();
+        this.stopLoops();
         document.getElementById('pause-screen').classList.add('active');
     }
 
@@ -886,8 +885,13 @@ class SnakeGame {
      */
     resumeGame() {
         if (this.state !== 'paused') return;
+        if (this.pauseStartedAt) {
+            this.startTime += Date.now() - this.pauseStartedAt;
+            this.pauseStartedAt = null;
+        }
         this.state = 'playing';
         document.getElementById('pause-screen').classList.remove('active');
+        this.stopLoops();
         this.lastFrameTime = performance.now();
         this.gameLoopId = requestAnimationFrame((t) => this.gameLoop(t));
         this.timerInterval = setInterval(() => this.updateTimer(), 100);
@@ -897,6 +901,7 @@ class SnakeGame {
      * 重新开始
      */
     restartGame() {
+        this.endGame();
         document.getElementById('result-screen').classList.remove('active');
         this.hideQuote();
         this.startCountdown();
@@ -907,6 +912,7 @@ class SnakeGame {
      */
     quitToMenu() {
         this.endGame();
+        this.state = 'menu';
         document.getElementById('game-screen').classList.remove('active');
         document.getElementById('pause-screen').classList.remove('active');
         document.getElementById('result-screen').classList.remove('active');
@@ -1061,6 +1067,11 @@ class SnakeGame {
     showCooldownOverlay(seconds) {
         const overlay = document.getElementById('cooldown-overlay');
         overlay.classList.add('active');
+
+        if (this.cooldownInterval) {
+            clearInterval(this.cooldownInterval);
+            this.cooldownInterval = null;
+        }
 
         const updateTimer = () => {
             const remaining = Utils.checkCooldown();

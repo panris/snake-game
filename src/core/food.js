@@ -11,6 +11,7 @@ class Food {
         this.type = 'normal'; // normal, bonus, speed
         this.spawnTime = 0;
         this.glowPhase = 0;
+        this.justSpawned = false;
 
         // 食物类型配置（支持难度定制）
         const defaults = {
@@ -29,6 +30,14 @@ class Food {
             bonus:  { color: '#ffd700', glowColor: 'rgba(255,215,0,0.6)', ...bon },
             speed:  { color: '#ff2d95', glowColor: 'rgba(255,45,149,0.5)', ...spd }
         };
+
+        // 归一化概率，避免合并配置后总和不为 1 导致类型未选中
+        const probSum = Object.values(this.types).reduce((s, t) => s + (t.probability || 0), 0);
+        if (probSum > 0) {
+            for (const t of Object.values(this.types)) {
+                t.probability = (t.probability || 0) / probSum;
+            }
+        }
     }
 
     /**
@@ -49,17 +58,14 @@ class Food {
             occupied.add(`${obs.x},${obs.y}`);
         });
 
-        // 找到所有可用位置
-        // 排除蛇身和障碍物占用格，以及边界（避免蛇吃到边界边的食物时撞墙）
+        // 找到所有可用位置（与蛇移动范围一致：整格棋盘，排除蛇身与障碍物）
         const available = [];
-        for (let x = 1; x < this.gridW - 1; x++) {
-            for (let y = 1; y < this.gridH - 1; y++) {
+        for (let x = 0; x < this.gridW; x++) {
+            for (let y = 0; y < this.gridH; y++) {
                 if (occupied.has(`${x},${y}`)) continue;
                 available.push({ x, y });
             }
         }
-
-        console.log('[Food.spawn] 可用位置数量:', available.length, '网格:', this.gridW, 'x', this.gridH, '排除边界: 1 到', this.gridW - 2);
 
         if (available.length === 0) {
             // 无可用位置，游戏应该结束
@@ -73,19 +79,25 @@ class Food {
             return false;
         }
 
-        // 随机选择食物类型
+        // 随机选择食物类型（保证必定选中一种）
         const rand = Math.random();
         let cumProb = 0;
+        let typeAssigned = false;
         for (const [typeName, config] of Object.entries(this.types)) {
-            cumProb += config.probability;
+            cumProb += config.probability || 0;
             if (rand <= cumProb) {
                 this.type = typeName;
+                typeAssigned = true;
                 break;
             }
+        }
+        if (!typeAssigned) {
+            this.type = 'normal';
         }
 
         this.spawnTime = Date.now();
         this.glowPhase = 0;
+        this.justSpawned = true;
 
         return true;
     }
@@ -94,9 +106,18 @@ class Food {
      * 检查食物是否过期（特殊食物有时效）
      */
     isExpired() {
+        if (this.justSpawned) return false;
         const config = this.types[this.type] || this.types['normal'];
-        if (!config || !config.duration) return false;
-        return Date.now() - this.spawnTime > config.duration;
+        const duration = config && config.duration;
+        if (typeof duration !== 'number' || duration <= 0) return false;
+        return Date.now() - this.spawnTime > duration;
+    }
+
+    /**
+     * 清除“刚生成”标记（每帧 updateGame 末尾调用一次）
+     */
+    clearJustSpawned() {
+        this.justSpawned = false;
     }
 
     /**

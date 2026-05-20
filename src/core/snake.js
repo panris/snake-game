@@ -37,8 +37,8 @@ class Snake {
             'left': 'right',
             'right': 'left'
         };
-        // 不允许反向移动
-        if (opposites[dir] !== this.direction) {
+        // 不允许与下一帧移动方向相反（防止同 tick 内 180° 转向）
+        if (dir !== opposites[this.nextDirection]) {
             this.nextDirection = dir;
         }
     }

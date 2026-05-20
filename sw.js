@@ -2,7 +2,7 @@
  * Service Worker — 贪吃蛇离线支持
  * 缓存策略：Cache First（所有资源优先读缓存）
  */
-const CACHE_NAME = 'snake-game-v1';
+const CACHE_NAME = 'snake-game-v2';
 const ASSETS = [
     './',
     './index.html',

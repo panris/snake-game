@@ -139,6 +139,15 @@ TestRunner.test('Snake 不允许反向移动', () => {
     TestRunner.assertEqual(head.x, 6, '不应允许反向');
 });
 
+TestRunner.test('Snake 不允许队列方向 180° 转向', () => {
+    const snake = new Snake(5, 5, 20);
+    snake.setDirection('up');
+    snake.setDirection('down'); // 与已队列的 up 相反
+    snake.move();
+    const head = snake.getHead();
+    TestRunner.assertEqual(head.y, 4, '不应在下一帧向下');
+});
+
 TestRunner.test('Snake 生长正确', () => {
     const snake = new Snake(5, 5, 20);
     const originalLength = snake.getLength();
@@ -206,6 +215,21 @@ TestRunner.test('Food 生成失败时返回false', () => {
     }
     const result = food.spawn(snakeBody, []);
     TestRunner.assert(!result, '无空位时应返回false');
+});
+
+TestRunner.test('Food 刚生成后不应立即判定过期', () => {
+    const food = new Food(20, 20, 20, {
+        normal: { score: 15, grow: 1 },
+        bonus: { score: 40, grow: 2, duration: 9000 },
+        speed: { score: 25, grow: 1, duration: 5000 }
+    });
+    food.type = 'bonus';
+    food.spawnTime = Date.now() - 10000;
+    TestRunner.assert(food.isExpired(), '未刷新前应已过期');
+    food.spawn([], []);
+    TestRunner.assert(!food.isExpired(), 'spawn 后同帧不应过期');
+    food.clearJustSpawned();
+    TestRunner.assert(food.isExpired(), '清除标记后应恢复过期判断');
 });
 
 TestRunner.test('Food 配置获取正确', () => {

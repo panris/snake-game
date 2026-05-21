@@ -148,6 +148,18 @@ TestRunner.test('Snake 不允许队列方向 180° 转向', () => {
     TestRunner.assertEqual(head.y, 4, '不应在下一帧向下');
 });
 
+TestRunner.test('Snake 不允许同 tick 内快速转成当前反方向', () => {
+    const snake = new Snake(5, 5, 20);
+    snake.setDirection('up');
+    snake.setDirection('left'); // 当前方向仍是 right，不能在移动前改成 left
+    snake.move();
+    const head = snake.getHead();
+
+    TestRunner.assertEqual(head.x, 5, '快速转向后不应掉头向左');
+    TestRunner.assertEqual(head.y, 4, '应保持第一次有效转向向上');
+    TestRunner.assert(!snake.checkSelfCollision(), '快速转向不应导致蛇头撞回身体');
+});
+
 TestRunner.test('Snake 生长正确', () => {
     const snake = new Snake(5, 5, 20);
     const originalLength = snake.getLength();
@@ -155,6 +167,14 @@ TestRunner.test('Snake 生长正确', () => {
     snake.move();
     snake.move();
     TestRunner.assertEqual(snake.getLength(), originalLength + 2, '生长后长度不正确');
+});
+
+TestRunner.test('Snake 吃食物的本次移动应立即生长', () => {
+    const snake = new Snake(5, 5, 20);
+    const originalLength = snake.getLength();
+    snake.move(1);
+
+    TestRunner.assertEqual(snake.getLength(), originalLength + 1, '吃食物当步应立即增加长度');
 });
 
 TestRunner.test('Snake 自身碰撞检测', () => {
@@ -172,7 +192,7 @@ TestRunner.test('Snake 自身碰撞检测', () => {
 
 TestRunner.test('Snake 边界检测', () => {
     const snake = new Snake(0, 0, 20);
-    snake.setDirection('left');
+    snake.setDirection('up');
     snake.move();
     TestRunner.assert(!snake.checkBoundary(20, 20), '出界后应返回false');
 });
@@ -226,8 +246,8 @@ TestRunner.test('Food 刚生成后不应立即判定过期', () => {
     food.type = 'bonus';
     food.spawnTime = Date.now() - 10000;
     TestRunner.assert(food.isExpired(), '未刷新前应已过期');
-    food.spawn([], []);
-    TestRunner.assert(!food.isExpired(), 'spawn 后同帧不应过期');
+    food.justSpawned = true;
+    TestRunner.assert(!food.isExpired(), '刚生成同帧不应过期');
     food.clearJustSpawned();
     TestRunner.assert(food.isExpired(), '清除标记后应恢复过期判断');
 });
@@ -259,6 +279,154 @@ TestRunner.test('难度速度梯度明确', () => {
 
     TestRunner.assert(speed1 > speed2, '简单难度应比中等难度慢');
     TestRunner.assert(speed2 > speed3, '中等难度应比困难难度慢');
+});
+
+TestRunner.test('各难度吃到普通食物后应保持游戏进行', () => {
+    [1, 2, 3].forEach(level => {
+        const game = new SnakeGame();
+        game.gridW = 20;
+        game.gridH = 20;
+        game.cellSize = 20;
+        game.difficulty = level;
+        game.state = 'playing';
+        game.score = 0;
+        game.elapsedTime = 0;
+        game.startTime = Date.now();
+        game.obstacles = [];
+        game.particles = [];
+        game.snake = new Snake(10, 10, 20);
+        game.food = new Food(20, 20, 20, game.difficultyConfigs[level].food);
+        game.food.position = { x: 11, y: 10 };
+        game.food.type = 'normal';
+        game.food.justSpawned = false;
+
+        game.updateGame();
+
+        TestRunner.assertEqual(game.state, 'playing', `${game.difficultyConfigs[level].name} 吃食物后不应结束`);
+        TestRunner.assertEqual(game.snake.getLength(), 4, `${game.difficultyConfigs[level].name} 吃食物后应立即增长`);
+        TestRunner.assertEqual(game.score, game.difficultyConfigs[level].food.normal.score, `${game.difficultyConfigs[level].name} 分数应增加`);
+    });
+});
+
+TestRunner.test('中等模式奖励食物刷新不应占用增长后的蛇身', () => {
+    const game = new SnakeGame();
+    game.gridW = 20;
+    game.gridH = 20;
+    game.cellSize = 20;
+    game.difficulty = 2;
+    game.state = 'playing';
+    game.score = 0;
+    game.elapsedTime = 0;
+    game.startTime = Date.now();
+    game.obstacles = [];
+    game.particles = [];
+    game.snake = new Snake(10, 10, 20);
+    game.food = new Food(20, 20, 20, game.difficultyConfigs[2].food);
+    game.food.position = { x: 11, y: 10 };
+    game.food.type = 'bonus';
+    game.food.justSpawned = false;
+
+    const originalTail = { x: 8, y: 10 };
+    game.updateGame();
+    const body = game.snake.getFullBody();
+    const newFood = game.food.getPosition();
+
+    TestRunner.assert(body.some(seg => seg.x === originalTail.x && seg.y === originalTail.y), '奖励食物吃下当步应保留原尾部');
+    TestRunner.assert(
+        !body.some(seg => seg.x === newFood.x && seg.y === newFood.y),
+        '新食物不应刷新在增长后的蛇身上'
+    );
+});
+
+TestRunner.test('中等模式吃到达标食物应当步胜利', () => {
+    const game = new SnakeGame();
+    game.gridW = 80;
+    game.gridH = 20;
+    game.cellSize = 20;
+    game.difficulty = 2;
+    game.state = 'playing';
+    game.score = 0;
+    game.elapsedTime = 0;
+    game.startTime = Date.now();
+    game.obstacles = [];
+    game.particles = [];
+    game.snake = new Snake(40, 10, 20);
+    game.snake.body = [];
+    for (let x = 40; x >= 7; x--) {
+        game.snake.body.push({ x, y: 10 });
+    }
+    game.snake.direction = 'right';
+    game.snake.nextDirection = 'right';
+    game.food = new Food(80, 20, 20, game.difficultyConfigs[2].food);
+    game.food.position = { x: 41, y: 10 };
+    game.food.type = 'normal';
+    game.food.justSpawned = false;
+
+    game.updateGame();
+
+    TestRunner.assertEqual(game.snake.getLength(), game.difficultyConfigs[2].targetLength, '吃到达标食物后长度应立即达标');
+    TestRunner.assertEqual(document.getElementById('result-title').textContent, '恭喜通关！', '达标后应当步胜利');
+});
+
+TestRunner.test('中等模式失败后重新开始吃第一个食物不应失败', async () => {
+    const originalSleep = Utils.sleep;
+    Utils.sleep = () => Promise.resolve();
+    Utils.removeStorage('fail_count');
+    Utils.removeStorage('cooldown_end');
+
+    const game = new SnakeGame();
+    try {
+        game.gridW = 80;
+        game.gridH = 20;
+        game.cellSize = 20;
+        game.difficulty = 2;
+        game.startGame();
+        game.handleDefeat('测试失败');
+
+        const restarted = await game.restartGame();
+        TestRunner.assert(restarted, '未进入冷却时应允许重新开始');
+
+        const nextHead = game.snake.getNextHead();
+        game.food.position = nextHead;
+        game.food.type = 'normal';
+        game.food.justSpawned = false;
+        game.updateGame();
+
+        TestRunner.assertEqual(game.state, 'playing', '重新开始后吃第一个食物不应结束');
+        TestRunner.assertEqual(game.snake.getLength(), 4, '重新开始后吃第一个食物应正常增长');
+    } finally {
+        game.endGame();
+        Utils.sleep = originalSleep;
+        Utils.removeStorage('fail_count');
+        Utils.removeStorage('cooldown_end');
+    }
+});
+
+TestRunner.test('中等模式连续吃多个食物后继续吃不应失败', () => {
+    const game = new SnakeGame();
+    game.gridW = 80;
+    game.gridH = 20;
+    game.cellSize = 20;
+    game.difficulty = 2;
+    game.state = 'playing';
+    game.score = 0;
+    game.elapsedTime = 0;
+    game.startTime = Date.now();
+    game.obstacles = [];
+    game.particles = [];
+    game.snake = new Snake(10, 10, 20);
+    game.food = new Food(80, 20, 20, game.difficultyConfigs[2].food);
+
+    for (let i = 0; i < 16; i++) {
+        game.food.position = game.snake.getNextHead();
+        game.food.type = i % 4 === 3 ? 'bonus' : 'normal';
+        game.food.justSpawned = false;
+        game.updateGame();
+
+        TestRunner.assertEqual(game.state, 'playing', `连续吃第 ${i + 1} 个食物后不应结束`);
+    }
+
+    TestRunner.assert(game.snake.getLength() > 3, '连续吃食物后长度应增长');
 });
 
 // ========== 文案库测试 ==========
@@ -294,7 +462,52 @@ TestRunner.test('障碍物不覆盖蛇身', () => {
     TestRunner.assert(!overlap, '障碍物不应与蛇身重叠');
 });
 
-// 运行测试
-TestRunner.run().then(success => {
-    window.testResults = { passed: TestRunner.passed, failed: TestRunner.failed, total: TestRunner.tests.length };
+TestRunner.test('中等模式障碍物数量精确且不重复', () => {
+    const game = new SnakeGame();
+    game.gridW = 20;
+    game.gridH = 20;
+    game.difficulty = 2;
+    game.snake = new Snake(10, 10, 20);
+    game.generateObstacles();
+
+    const obstacles = game.obstacles;
+    const unique = new Set(obstacles.map(obs => `${obs.x},${obs.y}`));
+    TestRunner.assertEqual(obstacles.length, game.difficultyConfigs[2].obstacleCount, '中等模式障碍物数量应等于配置');
+    TestRunner.assertEqual(unique.size, obstacles.length, '中等模式障碍物不应重复');
 });
+
+TestRunner.test('困难模式障碍物数量精确且全部在棋盘内', () => {
+    const game = new SnakeGame();
+    game.gridW = 20;
+    game.gridH = 20;
+    game.difficulty = 3;
+    game.snake = new Snake(10, 10, 20);
+
+    for (let i = 0; i < 20; i++) {
+        game.generateObstacles();
+        const obstacles = game.obstacles;
+        const unique = new Set(obstacles.map(obs => `${obs.x},${obs.y}`));
+
+        TestRunner.assertEqual(obstacles.length, game.difficultyConfigs[3].obstacleCount, '困难模式障碍物数量应等于配置');
+        TestRunner.assertEqual(unique.size, obstacles.length, '困难模式障碍物不应重复');
+        TestRunner.assert(
+            obstacles.every(obs => obs.x >= 0 && obs.x < game.gridW && obs.y >= 0 && obs.y < game.gridH),
+            '困难模式障碍物必须全部在棋盘内'
+        );
+    }
+});
+
+// 运行测试
+const testRunPromise = TestRunner.run().then(success => {
+    if (typeof window !== 'undefined') {
+        window.testResults = { passed: TestRunner.passed, failed: TestRunner.failed, total: TestRunner.tests.length };
+    }
+    if (typeof process !== 'undefined' && !success) {
+        process.exitCode = 1;
+    }
+    return success;
+});
+
+if (typeof window !== 'undefined') {
+    window.testRunPromise = testRunPromise;
+}

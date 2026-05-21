@@ -1,8 +1,8 @@
 /**
  * Service Worker — 贪吃蛇离线支持
- * 缓存策略：Cache First（所有资源优先读缓存）
+ * 缓存策略：Network First（在线优先拿最新代码，离线回退缓存）
  */
-const CACHE_NAME = 'snake-game-v2';
+const CACHE_NAME = 'snake-game-v5';
 const ASSETS = [
     './',
     './index.html',
@@ -35,25 +35,30 @@ self.addEventListener('activate', (event) => {
     );
 });
 
-// 请求拦截：Cache First
+// 请求拦截：Network First
 self.addEventListener('fetch', (event) => {
     // 仅处理同源请求
     if (!event.request.url.startsWith(self.location.origin)) return;
+    if (event.request.method !== 'GET') return;
 
     event.respondWith(
-        caches.match(event.request).then(cached => {
-            if (cached) return cached;
-
-            return fetch(event.request).then(response => {
-                // 仅缓存有效响应
-                if (!response || response.status !== 200 || response.type !== 'basic') {
-                    return response;
-                }
-                const clone = response.clone();
-                caches.open(CACHE_NAME).then(cache => {
-                    cache.put(event.request, clone);
-                });
+        fetch(event.request).then(response => {
+            // 仅缓存有效响应
+            if (!response || response.status !== 200 || response.type !== 'basic') {
                 return response;
+            }
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => {
+                cache.put(event.request, clone);
+            });
+            return response;
+        }).catch(() => {
+            return caches.match(event.request).then(cached => {
+                if (cached) return cached;
+                if (event.request.mode === 'navigate') {
+                    return caches.match('./index.html');
+                }
+                return Response.error();
             });
         })
     );

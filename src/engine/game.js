@@ -123,6 +123,7 @@ class SnakeGame {
 
         // 冷却检查
         this.cooldownCheckInterval = null;
+        this.cooldownOverlayTimeout = null;
 
         this.init();
     }
@@ -295,6 +296,10 @@ class SnakeGame {
      * 开始游戏
      */
     startGame() {
+        this.stopLoops();
+        this.clearPendingUiTimers();
+        this.resetGameOverlays();
+
         this.state = 'playing';
         this.score = 0;
         this.elapsedTime = 0;
@@ -340,8 +345,7 @@ class SnakeGame {
         // 更新显示
         this.updateStatusBar();
 
-        // 启动游戏循环（先清理旧循环，避免重复 RAF 导致一帧内多次移动/吃食物后立即死亡）
-        this.stopLoops();
+        // 启动游戏循环
         // ⚠️ lastFrameTime 必须在 RAF 回调内部设置，不能提前设！
         // 提前设置会导致第一帧 deltaTime 异常（可能包含 countdown → playing 切换的间隔），
         // 在困难模式(moveInterval=75ms)下可能一帧触发多次 updateGame，导致开局立即死亡
@@ -365,6 +369,48 @@ class SnakeGame {
     }
 
     /**
+     * 清理会跨局延迟触发的 UI 定时器
+     */
+    clearPendingUiTimers() {
+        if (this.quoteTimeout) {
+            clearTimeout(this.quoteTimeout);
+            this.quoteTimeout = null;
+        }
+        if (this.cooldownOverlayTimeout) {
+            clearTimeout(this.cooldownOverlayTimeout);
+            this.cooldownOverlayTimeout = null;
+        }
+    }
+
+    /**
+     * 新开一局前收起所有结束态/暂停态覆盖层
+     */
+    resetGameOverlays() {
+        ['pause-screen', 'result-screen', 'cooldown-overlay'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.classList.remove('active');
+        });
+
+        const countdownEl = document.getElementById('start-countdown');
+        if (countdownEl) {
+            countdownEl.classList.remove('active');
+        }
+
+        const quotePopup = document.getElementById('quote-popup');
+        if (quotePopup) {
+            quotePopup.classList.remove('active');
+        }
+
+        const wrapper = this.canvas && this.canvas.parentElement;
+        if (wrapper) {
+            wrapper.classList.remove('danger');
+        }
+
+        this.touchStart = null;
+        this.pauseStartedAt = null;
+    }
+
+    /**
      * 生成障碍物
      */
     generateObstacles() {
@@ -373,6 +419,7 @@ class SnakeGame {
             console.error('[generateObstacles] 难度配置不存在, difficulty:', this.difficulty);
             return;
         }
+        this.obstacles = [];
         if (config.obstacleCount === 0) return;
 
         const occupied = new Set();
@@ -382,6 +429,10 @@ class SnakeGame {
         console.log('[generateObstacles] 中心:', centerX, centerY, '网格:', this.gridW, 'x', this.gridH);
         console.log('[generateObstacles] 目标障碍物数:', config.obstacleCount, '复杂度:', config.obstacleComplexity);
 
+        if (this.snake) {
+            this.snake.getFullBody().forEach(seg => occupied.add(`${seg.x},${seg.y}`));
+        }
+
         // 保护中心区域（蛇的出生点）- 扩大到 11x11，给蛇更多活动空间
         for (let dx = -5; dx <= 5; dx++) {
             for (let dy = -5; dy <= 5; dy++) {
@@ -390,8 +441,9 @@ class SnakeGame {
         }
         console.log('[generateObstacles] 保护区域大小:', occupied.size);
 
+        const targetCount = Math.max(0, Math.min(config.obstacleCount, this.gridW * this.gridH - occupied.size));
         let attempts = 0;
-        while (this.obstacles.length < config.obstacleCount && attempts < 100) {
+        while (this.obstacles.length < targetCount && attempts < 1000) {
             attempts++;
             const x = Utils.randomInt(1, this.gridW - 2);
             const y = Utils.randomInt(1, this.gridH - 2);
@@ -402,30 +454,66 @@ class SnakeGame {
             // 根据复杂度生成不同形状的障碍物
             if (config.obstacleComplexity === 1) {
                 // 简单障碍物：单个方块
-                this.obstacles.push({ x, y });
-                occupied.add(key);
+                this.placeObstacleCells([{ x, y }], occupied, targetCount);
             } else if (config.obstacleComplexity === 2) {
-                // 复杂障碍物：2x2 方块或 L 形
-                if (Math.random() < 0.5 && x < this.gridW - 1 && y < this.gridH - 1) {
-                    // 2x2 - 检查所有4个格子是否都被占用
-                    const k1 = `${x},${y}`;
-                    const k2 = `${x + 1},${y}`;
-                    const k3 = `${x},${y + 1}`;
-                    const k4 = `${x + 1},${y + 1}`;
-                    if (!occupied.has(k1) && !occupied.has(k2) && !occupied.has(k3) && !occupied.has(k4)) {
-                        this.obstacles.push({ x, y }, { x: x + 1, y }, { x, y: y + 1 }, { x: x + 1, y: y + 1 });
-                        occupied.add(k1);
-                        occupied.add(k2);
-                        occupied.add(k3);
-                        occupied.add(k4);
-                    }
-                } else {
-                    this.obstacles.push({ x, y });
-                    occupied.add(key);
+                // 复杂障碍物：优先生成 2x2 方块或 L 形，剩余数量不足时退化为单格
+                const remaining = targetCount - this.obstacles.length;
+                const lShapes = [
+                    [{ x, y }, { x: x + 1, y }, { x, y: y + 1 }],
+                    [{ x, y }, { x: x - 1, y }, { x, y: y + 1 }],
+                    [{ x, y }, { x: x + 1, y }, { x, y: y - 1 }],
+                    [{ x, y }, { x: x - 1, y }, { x, y: y - 1 }]
+                ];
+                const complexShapes = [
+                    [{ x, y }, { x: x + 1, y }, { x, y: y + 1 }, { x: x + 1, y: y + 1 }],
+                    Utils.randomChoice(lShapes)
+                ];
+
+                let placed = false;
+                if (remaining >= 3) {
+                    const firstShape = Utils.randomChoice(complexShapes);
+                    const secondShape = firstShape.length === 4 ? complexShapes[1] : complexShapes[0];
+                    placed = this.placeObstacleCells(firstShape, occupied, targetCount) ||
+                             this.placeObstacleCells(secondShape, occupied, targetCount);
+                }
+                if (!placed) {
+                    this.placeObstacleCells([{ x, y }], occupied, targetCount);
+                }
+            } else {
+                this.placeObstacleCells([{ x, y }], occupied, targetCount);
+            }
+        }
+
+        if (this.obstacles.length < targetCount) {
+            for (let x = 1; x < this.gridW - 1 && this.obstacles.length < targetCount; x++) {
+                for (let y = 1; y < this.gridH - 1 && this.obstacles.length < targetCount; y++) {
+                    this.placeObstacleCells([{ x, y }], occupied, targetCount);
                 }
             }
         }
         console.log('[generateObstacles] 实际生成障碍物:', this.obstacles.length, '个', JSON.stringify(this.obstacles));
+    }
+
+    /**
+     * 尝试放置一组障碍物格子，保证不越界、不重复、不超过目标数量
+     */
+    placeObstacleCells(cells, occupied, targetCount) {
+        if (this.obstacles.length + cells.length > targetCount) return false;
+
+        for (const cell of cells) {
+            if (cell.x < 0 || cell.x >= this.gridW || cell.y < 0 || cell.y >= this.gridH) {
+                return false;
+            }
+            if (occupied.has(`${cell.x},${cell.y}`)) {
+                return false;
+            }
+        }
+
+        cells.forEach(cell => {
+            this.obstacles.push({ x: cell.x, y: cell.y });
+            occupied.add(`${cell.x},${cell.y}`);
+        });
+        return true;
     }
 
     /**
@@ -476,8 +564,22 @@ class SnakeGame {
         if (!this.snake || !this.snake.isAlive()) return;
 
         try {
-            // 移动蛇
-            this.snake.move();
+            const nextHead = this.snake.getNextHead();
+            const foodPos = this.food.getPosition();
+            const willEatFood = nextHead.x === foodPos.x && nextHead.y === foodPos.y;
+            let foodConfig = null;
+
+            if (willEatFood) {
+                foodConfig = this.food.getConfig();
+                if (!foodConfig) {
+                    console.error('[updateGame] config 为 null! food.type:', this.food.type);
+                    this.handleDefeat('食物配置异常');
+                    return;
+                }
+            }
+
+            // 移动蛇；吃到食物时本次移动立即增长，避免蛇身状态和食物刷新错位
+            this.snake.move(willEatFood ? foodConfig.grow : 0);
 
             const head = this.snake.getHead();
 
@@ -507,26 +609,17 @@ class SnakeGame {
             }
 
             // 检查食物碰撞
-            if (this.snake.checkFoodCollision(this.food.getPosition())) {
-                const config = this.food.getConfig();
-                const foodPos = this.food.getPosition();
-
+            if (willEatFood) {
                 // 仅检测食物是否与障碍物重叠（蛇头在食物格是正常的）
                 const foodOnObstacle = this.obstacles.some(obs => obs.x === foodPos.x && obs.y === foodPos.y);
                 if (foodOnObstacle) {
                     console.error('[updateGame] 食物与障碍物重叠:', foodPos);
                 }
 
-                if (!config) {
-                    console.error('[updateGame] config 为 null! food.type:', this.food.type);
-                    this.handleDefeat('食物配置异常');
-                    return;
-                }
-                this.score += config.score;
-                this.snake.grow(config.grow);
+                this.score += foodConfig.score;
 
                 // 粒子特效
-                this.spawnParticles(this.food.getPosition(), config.color);
+                this.spawnParticles(foodPos, foodConfig.color);
 
                 // 生成新食物
                 const spawnOk = this.food.spawn(this.snake.getFullBody(), this.obstacles);
@@ -793,8 +886,11 @@ class SnakeGame {
         // 检查是否需要冷却
         if (failCount >= 3) {
             Utils.triggerCooldown(2);
-            setTimeout(() => {
-                this.showCooldownOverlay(120);
+            this.cooldownOverlayTimeout = setTimeout(() => {
+                this.cooldownOverlayTimeout = null;
+                if (this.state === 'gameover' || this.state === 'menu') {
+                    this.showCooldownOverlay(120);
+                }
             }, 3000);
         }
     }
@@ -909,10 +1005,17 @@ class SnakeGame {
      * 重新开始
      */
     restartGame() {
+        const cooldownSec = Utils.checkCooldown();
+        if (cooldownSec > 0) {
+            this.showCooldownOverlay(cooldownSec);
+            return Promise.resolve(false);
+        }
+
         this.endGame();
-        document.getElementById('result-screen').classList.remove('active');
+        this.clearPendingUiTimers();
+        this.resetGameOverlays();
         this.hideQuote();
-        this.startCountdown();
+        return this.startCountdown().then(() => true);
     }
 
     /**
@@ -920,6 +1023,7 @@ class SnakeGame {
      */
     quitToMenu() {
         this.endGame();
+        this.clearPendingUiTimers();
         this.state = 'menu';
         document.getElementById('game-screen').classList.remove('active');
         document.getElementById('pause-screen').classList.remove('active');

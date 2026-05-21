@@ -5,7 +5,7 @@
   "main": "index.html",
   "scripts": {
     "start": "python3 -m http.server 8888",
-    "test": "echo '测试用浏览器打开 tests/test-runner.html'"
+    "test": "node tests/node-runner.js"
   },
   "keywords": ["snake", "game", "html5", "canvas"],
   "author": "Hermes Agent",

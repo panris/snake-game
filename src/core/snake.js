@@ -37,8 +37,11 @@ class Snake {
             'left': 'right',
             'right': 'left'
         };
-        // 不允许与下一帧移动方向相反（防止同 tick 内 180° 转向）
-        if (dir !== opposites[this.nextDirection]) {
+        if (!opposites[dir]) return;
+
+        // 同一个移动 tick 内可能收到多次输入，既不能反向当前方向，
+        // 也不能反向已排队的下一方向，否则快速按键会让蛇头撞回身体。
+        if (dir !== opposites[this.direction] && dir !== opposites[this.nextDirection]) {
             this.nextDirection = dir;
         }
     }
@@ -53,22 +56,12 @@ class Snake {
     /**
      * 移动一步
      */
-    move() {
+    move(growAmount = 0) {
         if (!this.alive) return false;
 
         this.direction = this.nextDirection;
 
-        const head = { ...this.body[0] };
-        const dirs = {
-            'up': { x: 0, y: -1 },
-            'down': { x: 0, y: 1 },
-            'left': { x: -1, y: 0 },
-            'right': { x: 1, y: 0 }
-        };
-
-        const delta = dirs[this.direction];
-        head.x += delta.x;
-        head.y += delta.y;
+        const head = this.getNextHead(this.direction);
 
         // 添加轨迹
         this.addTrail(this.body[0]);
@@ -77,6 +70,9 @@ class Snake {
         this.body.unshift(head);
 
         // 处理生长
+        if (growAmount > 0) {
+            this.grow(growAmount);
+        }
         if (this.growPending > 0) {
             this.growPending--;
         } else {
@@ -88,10 +84,30 @@ class Snake {
     }
 
     /**
+     * 预判下一步头部位置
+     */
+    getNextHead(direction = this.nextDirection) {
+        const head = { ...this.body[0] };
+        const dirs = {
+            'up': { x: 0, y: -1 },
+            'down': { x: 0, y: 1 },
+            'left': { x: -1, y: 0 },
+            'right': { x: 1, y: 0 }
+        };
+        const delta = dirs[direction] || dirs[this.direction] || dirs.right;
+
+        return {
+            x: head.x + delta.x,
+            y: head.y + delta.y
+        };
+    }
+
+    /**
      * 添加生长请求
      */
     grow(amount = 1) {
-        this.growPending += amount;
+        const growth = Number.isFinite(amount) ? Math.max(0, amount) : 0;
+        this.growPending += growth;
     }
 
     /**

@@ -313,7 +313,6 @@ class SnakeGame {
         const startX = Math.floor(this.gridW / 2);
         const startY = Math.floor(this.gridH / 2);
         this.snake = new Snake(startX, startY, this.cellSize);
-        console.log('[startGame] 蛇初始位置: 头', startX, startY, '身体:', JSON.stringify(this.snake.getFullBody()));
 
         // 生成障碍物
         this.generateObstacles();
@@ -426,8 +425,7 @@ class SnakeGame {
         const centerX = Math.floor(this.gridW / 2);
         const centerY = Math.floor(this.gridH / 2);
 
-        console.log('[generateObstacles] 中心:', centerX, centerY, '网格:', this.gridW, 'x', this.gridH);
-        console.log('[generateObstacles] 目标障碍物数:', config.obstacleCount, '复杂度:', config.obstacleComplexity);
+
 
         if (this.snake) {
             this.snake.getFullBody().forEach(seg => occupied.add(`${seg.x},${seg.y}`));
@@ -439,7 +437,7 @@ class SnakeGame {
                 occupied.add(`${centerX + dx},${centerY + dy}`);
             }
         }
-        console.log('[generateObstacles] 保护区域大小:', occupied.size);
+
 
         const targetCount = Math.max(0, Math.min(config.obstacleCount, this.gridW * this.gridH - occupied.size));
         let attempts = 0;
@@ -491,7 +489,6 @@ class SnakeGame {
                 }
             }
         }
-        console.log('[generateObstacles] 实际生成障碍物:', this.obstacles.length, '个', JSON.stringify(this.obstacles));
     }
 
     /**
@@ -584,26 +581,19 @@ class SnakeGame {
             const head = this.snake.getHead();
 
             // 检查边界碰撞
-            const inBoundary = this.snake.checkBoundary(this.gridW, this.gridH);
-            if (!inBoundary) {
-                console.log('[updateGame] ❌ 撞到边界! 蛇头:', head);
+            if (!this.snake.checkBoundary(this.gridW, this.gridH)) {
                 this.handleDefeat('撞到了边界！');
                 return;
             }
 
             // 检查自身碰撞
-            const selfCollide = this.snake.checkSelfCollision();
-            if (selfCollide) {
-                console.log('[updateGame] ❌ 撞到自己! 蛇头:', head, '身体:', JSON.stringify(this.snake.getBody()));
+            if (this.snake.checkSelfCollision()) {
                 this.handleDefeat('撞到了自己！');
                 return;
             }
 
             // 检查障碍物碰撞
-            const obstacleCollide = this.snake.checkObstacleCollision(this.obstacles);
-            if (obstacleCollide) {
-                const hitObstacle = this.obstacles.find(obs => head.x === obs.x && head.y === obs.y);
-                console.log('[updateGame] ❌ 撞到障碍物! 蛇头:', head, '撞到的障碍物:', JSON.stringify(hitObstacle));
+            if (this.snake.checkObstacleCollision(this.obstacles)) {
                 this.handleDefeat('撞到了障碍物！');
                 return;
             }
@@ -862,9 +852,7 @@ class SnakeGame {
      * 处理胜利
      */
     handleVictory() {
-        console.log('[handleVictory] 被调用, 长度:', this.snake && this.snake.getLength());
         this.endGame();
-
         const config = this.difficultyConfigs[this.difficulty];
         this.showResult('victory', '恭喜通关！', `你在 ${config.name} 中成功驯服了贪吃蛇！`);
         this.showRandomQuote('victory');
@@ -874,7 +862,6 @@ class SnakeGame {
      * 处理失败
      */
     handleDefeat(reason) {
-        console.log('[handleDefeat] 原因:', reason, '| 状态:', this.state, '| 难度:', this.difficulty, '| 蛇长度:', this.snake && this.snake.getLength());
         this.endGame();
 
         // 记录失败

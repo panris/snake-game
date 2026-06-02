@@ -317,6 +317,9 @@ class SnakeGame {
         // 生成障碍物
         this.generateObstacles();
 
+        // 🔒 Invariant 断言：障碍物必须合法
+        this.assertObstaclesValid();
+
         // 创建食物
         const diffConfig = this.difficultyConfigs[this.difficulty];
         if (!diffConfig) {
@@ -489,6 +492,9 @@ class SnakeGame {
                 }
             }
         }
+
+        // 🔒 Invariant 断言：障碍物必须合法
+        this.assertObstaclesValid();
     }
 
     /**
@@ -1223,9 +1229,29 @@ class SnakeGame {
             cards.forEach(card => card.classList.remove('disabled'));
         }
     }
-}
+    /**
+     * 🔒 Invariant：障碍物永不与蛇身重叠、不越界、不重复
+     * @throws Error
+     */
+    assertObstaclesValid() {
+        if (!this.snake) return;
+        const body = this.snake.getFullBody ? this.snake.getFullBody() : (this.snake.body || []);
+        const bodySet = new Set(body.map(seg => seg.x + ',' + seg.y));
+        const obsSet = new Set();
 
-// 启动游戏
-document.addEventListener('DOMContentLoaded', () => {
-    window.game = new SnakeGame();
-});
+        for (const obs of this.obstacles) {
+            if (obs.x < 0 || obs.x >= this.gridW || obs.y < 0 || obs.y >= this.gridH) {
+                throw new Error('[Invariant] obstacle(' + obs.x + ',' + obs.y + ') 越界');
+            }
+            if (bodySet.has(obs.x + ',' + obs.y)) {
+                throw new Error('[Invariant] obstacle(' + obs.x + ',' + obs.y + ') 与蛇身重叠');
+            }
+            const key = obs.x + ',' + obs.y;
+            if (obsSet.has(key)) {
+                throw new Error('[Invariant] obstacle(' + obs.x + ',' + obs.y + ') 重复');
+            }
+            obsSet.add(key);
+        }
+    }
+
+}

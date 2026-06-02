@@ -497,6 +497,96 @@ TestRunner.test('困难模式障碍物数量精确且全部在棋盘内', () => 
     }
 });
 
+
+// ========== 🔒 Invariant 专项测试 ==========
+TestRunner.test('Food.assertNotOnObstacle 位置合法时不抛异常', () => {
+    const food = new Food(20, 20, 20);
+    food.position = { x: 5, y: 5 };
+    const snakeBody = [{ x: 0, y: 0 }, { x: 1, y: 0 }];
+    const obstacles = [{ x: 10, y: 10 }];
+    // 不应抛出任何异常
+    food.assertNotOnObstacle(snakeBody, obstacles);
+    TestRunner.assert(true, '合法位置不应抛异常');
+});
+
+TestRunner.test('Food.assertNotOnObstacle 在蛇身上时抛异常', () => {
+    const food = new Food(20, 20, 20);
+    food.position = { x: 1, y: 0 };
+    const snakeBody = [{ x: 0, y: 0 }, { x: 1, y: 0 }];
+    try {
+        food.assertNotOnObstacle(snakeBody, []);
+        TestRunner.assert(false, '应抛出 Error');
+    } catch (e) {
+        TestRunner.assert(e instanceof Error, '应抛出 Error');
+        TestRunner.assert(e.message.includes('snake'), '错误信息应包含 snake');
+    }
+});
+
+TestRunner.test('Food.assertNotOnObstacle 在障碍物上时抛异常', () => {
+    const food = new Food(20, 20, 20);
+    food.position = { x: 10, y: 10 };
+    const obstacles = [{ x: 10, y: 10 }];
+    try {
+        food.assertNotOnObstacle([], obstacles);
+        TestRunner.assert(false, '应抛出 Error');
+    } catch (e) {
+        TestRunner.assert(e instanceof Error, '应抛出 Error');
+        TestRunner.assert(e.message.includes('obstacle'), '错误信息应包含 obstacle');
+    }
+});
+
+TestRunner.test('game.assertObstaclesValid 障碍物合法时不抛异常', () => {
+    const game = new SnakeGame();
+    game.gridW = 20; game.gridH = 20;
+    game.snake = new Snake(10, 10, 20);
+    game.obstacles = [{ x: 5, y: 5 }, { x: 6, y: 6 }];
+    // 不应抛出任何异常
+    game.assertObstaclesValid();
+    TestRunner.assert(true, '合法障碍物不应抛异常');
+});
+
+TestRunner.test('game.assertObstaclesValid 障碍物越界时抛异常', () => {
+    const game = new SnakeGame();
+    game.gridW = 20; game.gridH = 20;
+    game.snake = new Snake(10, 10, 20);
+    game.obstacles = [{ x: 20, y: 5 }];  // x 越界 (0~19)
+    try {
+        game.assertObstaclesValid();
+        TestRunner.assert(false, '应抛出 Error');
+    } catch (e) {
+        TestRunner.assert(e instanceof Error, '应抛出 Error');
+        TestRunner.assert(e.message.includes('越界'), '错误信息应包含 越界');
+    }
+});
+
+TestRunner.test('game.assertObstaclesValid 障碍物与蛇身重叠时抛异常', () => {
+    const game = new SnakeGame();
+    game.gridW = 20; game.gridH = 20;
+    game.snake = new Snake(10, 10, 20);  // 蛇头在 (10,10)
+    game.obstacles = [{ x: 10, y: 10 }];
+    try {
+        game.assertObstaclesValid();
+        TestRunner.assert(false, '应抛出 Error');
+    } catch (e) {
+        TestRunner.assert(e instanceof Error, '应抛出 Error');
+        TestRunner.assert(e.message.includes('重叠'), '错误信息应包含 重叠');
+    }
+});
+
+TestRunner.test('game.assertObstaclesValid 障碍物重复时抛异常', () => {
+    const game = new SnakeGame();
+    game.gridW = 20; game.gridH = 20;
+    game.snake = new Snake(10, 10, 20);
+    game.obstacles = [{ x: 5, y: 5 }, { x: 5, y: 5 }];  // 重复
+    try {
+        game.assertObstaclesValid();
+        TestRunner.assert(false, '应抛出 Error');
+    } catch (e) {
+        TestRunner.assert(e instanceof Error, '应抛出 Error');
+        TestRunner.assert(e.message.includes('重复'), '错误信息应包含 重复');
+    }
+});
+
 // 运行测试
 const testRunPromise = TestRunner.run().then(success => {
     if (typeof window !== 'undefined') {

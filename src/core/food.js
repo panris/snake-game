@@ -99,6 +99,9 @@ class Food {
         this.glowPhase = 0;
         this.justSpawned = true;
 
+        // 🔒 Invariant 断言：食物位置必须合法
+        this.assertNotOnObstacle(snakeBody, obstacles);
+
         return true;
     }
 
@@ -219,9 +222,34 @@ class Food {
     }
 
     /**
-     * 获取食物位置
+     * 🔒 Invariant：食物永不在障碍物或蛇身上
+     * @param {Array} snakeBody
+     * @param {Array} obstacles
+     * @throws Error
      */
+    assertNotOnObstacle(snakeBody = [], obstacles = []) {
+        const pos = this.position;
+        const conflicts = [];
+
+        for (const seg of snakeBody) {
+            if (seg.x === pos.x && seg.y === pos.y) {
+                conflicts.push(`snake(${seg.x},${seg.y})`);
+            }
+        }
+        for (const obs of obstacles) {
+            if (obs.x === pos.x && obs.y === pos.y) {
+                conflicts.push(`obstacle(${obs.x},${obs.y})`);
+            }
+        }
+
+        if (conflicts.length > 0) {
+            throw new Error(
+                `[Food Invariant] food@(${pos.x},${pos.y}) overlaps: ${conflicts.join(', ')}`
+            );
+        }
+    }
+
     getPosition() {
-        return { ...this.position };
+        return this.position;
     }
 }

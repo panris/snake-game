@@ -180,6 +180,9 @@ class SnakeGame {
      * 绑定事件
      */
     bindEvents() {
+        if (this._eventsBound) return;
+        this._eventsBound = true;
+
         // 难度选择
         document.querySelectorAll('.diff-card').forEach(card => {
             card.addEventListener('click', (e) => {
@@ -538,7 +541,9 @@ class SnakeGame {
             this.moveAccumulator += deltaTime;
             const moveInterval = this.difficultyConfigs[this.difficulty].moveInterval;
 
-            if (this.moveAccumulator >= moveInterval) {
+            // 允许单帧内多次 move，修正 requestAnimationFrame 帧间隔导致的精度偏差
+            let maxMovesPerFrame = 3;
+            while (this.moveAccumulator >= moveInterval && maxMovesPerFrame-- > 0) {
                 this.moveAccumulator -= moveInterval;
                 this.updateGame();
                 if (this.state !== 'playing') return;

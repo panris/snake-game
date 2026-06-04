@@ -247,6 +247,9 @@ class SnakeGame {
      * 选择难度
      */
     selectDifficulty(level) {
+        // 倒计时进行中，拒绝重复选择
+        if (this.state === 'countdown') return;
+
         // 校验难度合法性
         if (!this.difficultyConfigs[level]) {
             console.error(`无效难度等级: ${level}，仅支持 1/2/3`);
@@ -978,6 +981,15 @@ class SnakeGame {
         if (this.state !== 'playing') return;
         this.state = 'paused';
         this.pauseStartedAt = Date.now();
+        // 记录暂停时食物的剩余有效时间，防止长暂停后食物过期
+        if (this.food) {
+            const config = this.food.getConfig();
+            if (config && config.duration > 0) {
+                this._foodRemainingAtPause = config.duration - (Date.now() - this.food.spawnTime);
+            } else {
+                this._foodRemainingAtPause = null;
+            }
+        }
         this.stopLoops();
         document.getElementById('pause-screen').classList.add('active');
     }
@@ -988,8 +1000,14 @@ class SnakeGame {
     resumeGame() {
         if (this.state !== 'paused') return;
         if (this.pauseStartedAt) {
-            this.startTime += Date.now() - this.pauseStartedAt;
+            const pauseDuration = Date.now() - this.pauseStartedAt;
+            this.startTime += pauseDuration;
             this.pauseStartedAt = null;
+            // 补偿食物 spawnTime，防止暂停期间食物过期
+            if (this.food && this._foodRemainingAtPause != null && this._foodRemainingAtPause > 0) {
+                this.food.spawnTime = Date.now() - (this.food.getConfig().duration - this._foodRemainingAtPause);
+            }
+            this._foodRemainingAtPause = null;
         }
         this.state = 'playing';
         document.getElementById('pause-screen').classList.remove('active');
